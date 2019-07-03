@@ -1,0 +1,46 @@
+#!/usr/bin/python3 -B
+
+"""
+Parses a lowest common denominator set of metadata from the given
+PNG/PNM/JPEG/TIFF image, i.e., the dimensions and bit depth.
+"""
+
+import os              # built-in library
+import sys             # built-in library
+import glob            # built-in library
+import tqdm            # pip install tqdm
+import imsize          # pip install imsize
+
+
+if __name__ == "__main__":
+
+    filetypes = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.jpeg", "*.jpg", "*.tiff", "*.tif"]
+
+    allfiles = []
+
+    if len(sys.argv[1:]) == 0:
+        for filetype in filetypes:
+            allfiles += glob.glob(filetype)
+            allfiles += glob.glob(filetype.upper())
+
+    for path in sys.argv[1:]:
+        if os.path.isdir(path):
+            for filetype in filetypes:
+                allfiles += glob.glob(os.path.join(path, filetype))
+                allfiles += glob.glob(os.path.join(path, filetype.upper()))
+        elif os.path.isfile(path):
+            allfiles += [path]
+
+    total_compressed = 0
+    total_uncompressed = 0
+    processed_files = []
+    iterator = tqdm.tqdm if len(allfiles) > 100 else lambda lst: lst
+
+    for filespec in iterator(allfiles):
+        info = imsize.read(filespec)
+        if info is not None:
+            processed_files += [filespec]
+            total_uncompressed += info.nbytes / 1024**2
+            total_compressed += info.filesize / 1024**2
+
+    print(f"Scanned {len(processed_files)} images, total {total_compressed:.1f} MB compressed, {total_uncompressed:.1f} MB uncompressed")
