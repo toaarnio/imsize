@@ -19,5 +19,5 @@ setup(name='imsize',
       license='MIT',
       packages=find_packages(),
       install_requires=read_deps("requirements.txt"),
-      test_suite='imsize',
-      zip_safe=False)
+      entry_points={'console_scripts': ['imsize = imsize.consoleapp:main']},
+      zip_safe=True)

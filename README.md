@@ -11,17 +11,22 @@ Supports PGM / PPM / PNM / PNG / JPG / TIFF.
 pip install imsize
 ```
 
-**Building & installing from source:**
+**Documentation:**
 ```
-git clean -dfx
-python setup.py bdist_wheel
-pip uninstall imsize
-pip install --user dist/*.whl
+pydoc imsize
 ```
 
-**Releasing to PyPI:**
+**Command-line usage:**
 ```
-pip install --user --upgrade setuptools wheel twine
-python setup.py sdist bdist_wheel
-twine upload dist/*
+imsize --help
+```
+
+**Building & installing from source:**
+```
+make install
+```
+
+**Building & releasing to PyPI:**
+```
+make release
 ```

@@ -1,19 +1,19 @@
 #!/usr/bin/python3 -B
 
 import os              # built-in library
-import numpy as np     # pip install numpy
+import math            # built-in library
 import piexif          # pip install piexif
 
 try:
     # package mode
     from imsize import pnghdr   # local import: pnghdr.py
     from imsize import jpeghdr  # local import: jpeghdr.py
-    from imsize import pnm      # local import: pnm.py
+    from imsize import pnmhdr   # local import: pnmhdr.py
 except ImportError:
     # stand-alone mode
     import pnghdr
     import jpeghdr
-    import pnm
+    import pnmhdr
 
 
 ######################################################################################
@@ -37,7 +37,6 @@ class ImageInfo:
       bitdepth (int): Bits per sample: 1 to 16
       bytedepth (int): Bytes per sample: 1 or 2
       maxval (int): Maximum representable sample value, e.g., 255
-      dtype (type): NumPy dtype for sample values: uint8 or uint16
       nbytes (int): Size of the image in bytes, uncompressed
     """
     def __init__(self):
@@ -50,7 +49,6 @@ class ImageInfo:
         self.bitdepth = None
         self.bytedepth = None
         self.maxval = None
-        self.dtype = None
         self.nbytes = None
 
 
@@ -112,7 +110,7 @@ def _read_png(filespec):
 
 
 def _read_pnm(filespec):
-    shape, maxval = pnm.dims(filespec)
+    shape, maxval = pnmhdr.dims(filespec)
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "pnm"
@@ -160,8 +158,7 @@ def _read_jpeg(filespec):
 def _complete(info):
     info.filesize = os.path.getsize(info.filespec)
     info.maxval = info.maxval or 2 ** info.bitdepth - 1
-    info.bitdepth = info.bitdepth or int(np.log2(info.maxval + 1))
+    info.bitdepth = info.bitdepth or int(math.log2(info.maxval + 1))
     info.bytedepth = 2 if info.maxval > 255 else 1
-    info.dtype = np.uint16 if info.maxval > 255 else np.uint8
     info.nbytes = info.width * info.height * info.nchan * info.bytedepth
     return info
