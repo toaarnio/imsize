@@ -146,8 +146,6 @@ class Jpeg(KaitaiStruct):
         def _read(self):
             self.magic = (self._io.read_bytes_term(0, False, True, True)).decode(u"ASCII")
             _on = self.magic
-            if _on == u"Exif":
-                self.body = self._root.ExifInJpeg(self._io, self, self._root)
 
 
     class SegmentSof0(KaitaiStruct):
@@ -195,20 +193,6 @@ class Jpeg(KaitaiStruct):
                 self._m_sampling_y = (self.sampling_factors & 15)
                 return self._m_sampling_y if hasattr(self, '_m_sampling_y') else None
 
-
-
-    class ExifInJpeg(KaitaiStruct):
-        def __init__(self, _io, _parent=None, _root=None):
-            self._io = _io
-            self._parent = _parent
-            self._root = _root if _root else self
-            self._read()
-
-        def _read(self):
-            self.extra_zero = self._io.ensure_fixed_contents(b"\x00")
-            self._raw_data = self._io.read_bytes_full()
-            io = KaitaiStream(BytesIO(self._raw_data))
-            self.data = Exif(io)
 
 
     class SegmentApp0(KaitaiStruct):
