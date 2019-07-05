@@ -31,6 +31,7 @@ class ImageInfo:
       filespec (str): The filespec given to read(), copied verbatim
       filetype (str): File type: "png", "pnm", "jpeg" or "exif"
       filesize (int): Size of the file on disk in bytes
+      cfa_raw (bool): True if the image is in CFA (Bayer) raw format
       width (int): Width of the image in pixels (orientation ignored)
       height (int): Height of the image in pixels (orientation ignored)
       nchan (int): Number of color channels: 1, 2, 3 or 4
@@ -43,6 +44,7 @@ class ImageInfo:
         self.filespec = None
         self.filetype = None
         self.filesize = None
+        self.cfa_raw = None
         self.width = None
         self.height = None
         self.nchan = None
@@ -55,9 +57,9 @@ class ImageInfo:
 def read(filespec):
     """
     Parses a lowest common denominator set of metadata from the given
-    PNG/PNM/JPEG/TIFF image, i.e., the dimensions and bit depth. Does
-    not read the entire file but only what's necessary. Returns an
-    ImageInfo with all fields filled in, or None in case of failure.
+    image, i.e., the dimensions and bit depth. Does not read the entire
+    file but only what's necessary. Returns an ImageInfo with all fields
+    filled in, or None in case of failure.
 
     Example:
       info = imsize.read("myfile.jpg")
@@ -73,9 +75,12 @@ def read(filespec):
                 "ppm": _read_pnm,
                 "jpeg": _read_jpeg,
                 "jpg": _read_jpeg,
+                "insp": _read_jpeg,
                 "tiff": _read_exif,
                 "tif": _read_exif,
-                "webp": _read_exif}
+                "webp": _read_exif,
+                "dng": _read_exif,
+                "cr2": _read_exif}
     if filetype in handlers:
         handler = handlers[filetype]
         info = handler(filespec)
@@ -124,17 +129,22 @@ def _read_pnm(filespec):
 
 def _read_exif(filespec):
     try:
-        exif = piexif.load(filespec).pop("0th")
+        exif = piexif.load(filespec)
+        exif = exif.pop("0th")
         info = ImageInfo()
         info.filespec = filespec
         info.filetype = "exif"
+        info.cfa_raw = exif.get(piexif.ImageIFD.PhotometricInterpretation) in [32803, 34892]
         info.width = exif.get(piexif.ImageIFD.ImageWidth)
         info.height = exif.get(piexif.ImageIFD.ImageLength)
         info.nchan = exif.get(piexif.ImageIFD.SamplesPerPixel)
-        info.bitdepth = exif.get(piexif.ImageIFD.BitsPerSample)[0]
+        info.bitdepth = exif.get(piexif.ImageIFD.BitsPerSample)
+        if isinstance(info.bitdepth, tuple):
+            info.nchan = len(info.bitdepth)
+            info.bitdepth = info.bitdepth[0]
         info = _complete(info)
         return info
-    except TypeError:
+    except (TypeError, ValueError):
         print(f"Unable to parse {filespec}: missing/broken EXIF metadata.")
         return None
 

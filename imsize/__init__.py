@@ -1,5 +1,5 @@
 """
-Extracts image dimensions & bit depth. Supports PGM/PPM/PNM/JPG/TIFF.
+Extracts image dimensions & bit depth. Supports PGM/PPM/PNM/JPG/INSP/TIFF/DNG.
 
 Example:
   info = imsize.read("myfile.jpg")
@@ -11,5 +11,5 @@ https://github.com/toaarnio/imsize
 
 from .imsize import *
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __all__ = ["read", "ImageInfo"]
