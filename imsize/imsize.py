@@ -2,7 +2,7 @@
 
 import os              # built-in library
 import math            # built-in library
-import pprint          # pip install pprint
+import pprint          # built-in library
 import piexif          # pip install piexif
 
 try:
