@@ -2,6 +2,7 @@
 
 import os              # built-in library
 import math            # built-in library
+import pprint          # pip install pprint
 import piexif          # pip install piexif
 
 try:
@@ -52,6 +53,16 @@ class ImageInfo:
         self.bytedepth = None
         self.maxval = None
         self.nbytes = None
+
+    def __repr__(self):
+        classname = self.__class__
+        elements = self.__dict__
+        reprstr = f"<ImageInfo {self.__dict__}>"
+        return reprstr
+
+    def __str__(self):
+        infostr = pprint.pformat(self.__dict__)
+        return infostr
 
 
 def read(filespec):
@@ -106,6 +117,7 @@ def _read_png(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "png"
+    info.cfa_raw = False
     info.width = header.ihdr.width
     info.height = header.ihdr.height
     info.nchan = nchannels[header.ihdr.color_type]
@@ -119,6 +131,7 @@ def _read_pnm(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "pnm"
+    info.cfa_raw = False
     info.width = shape[1]
     info.height = shape[0]
     info.nchan = shape[2]
@@ -153,6 +166,7 @@ def _read_jpeg(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "jpeg"
+    info.cfa_raw = False
     data = jpeghdr.Jpeg.from_file(filespec)
     for seg in data.segments:
         if seg.marker == seg.MarkerEnum.sof0:
