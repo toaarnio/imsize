@@ -19,7 +19,7 @@ except ImportError:
     import argv
 
 
-FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.dng"]
+FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.dng"]
 
 
 def main():

@@ -10,11 +10,13 @@ try:
     from imsize import pnghdr   # local import: pnghdr.py
     from imsize import jpeghdr  # local import: jpeghdr.py
     from imsize import pnmhdr   # local import: pnmhdr.py
+    from imsize import pfmhdr   # local import: pfmhdr.py
 except ImportError:
     # stand-alone mode
     import pnghdr
     import jpeghdr
     import pnmhdr
+    import pfmhdr
 
 
 ######################################################################################
@@ -30,14 +32,15 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: "png", "pnm", "jpeg" or "exif"
+      filetype (str): File type: "png", "pnm", "pfm", "jpeg" or "exif"
       filesize (int): Size of the file on disk in bytes
+      isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
       width (int): Width of the image in pixels (orientation ignored)
       height (int): Height of the image in pixels (orientation ignored)
       nchan (int): Number of color channels: 1, 2, 3 or 4
-      bitdepth (int): Bits per sample: 1 to 16
-      bytedepth (int): Bytes per sample: 1 or 2
+      bitdepth (int): Bits per sample: 1 to 32
+      bytedepth (int): Bytes per sample: 1, 2 or 4
       maxval (int): Maximum representable sample value, e.g., 255
       nbytes (int): Size of the image in bytes, uncompressed
     """
@@ -45,6 +48,7 @@ class ImageInfo:
         self.filespec = None
         self.filetype = None
         self.filesize = None
+        self.isfloat = None
         self.cfa_raw = None
         self.width = None
         self.height = None
@@ -84,6 +88,7 @@ def read(filespec):
                 "pnm": _read_pnm,
                 "pgm": _read_pnm,
                 "ppm": _read_pnm,
+                "pfm": _read_pfm,
                 "jpeg": _read_jpeg,
                 "jpg": _read_jpeg,
                 "insp": _read_jpeg,
@@ -117,6 +122,7 @@ def _read_png(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "png"
+    info.isfloat = False
     info.cfa_raw = False
     info.width = header.ihdr.width
     info.height = header.ihdr.height
@@ -131,11 +137,30 @@ def _read_pnm(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "pnm"
+    info.isfloat = False
     info.cfa_raw = False
     info.width = shape[1]
     info.height = shape[0]
     info.nchan = shape[2]
     info.maxval = maxval
+    info = _complete(info)
+    return info
+
+
+def _read_pfm(filespec):
+    shape, maxval = pfmhdr.dims(filespec)
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "pfm"
+    info.isfloat = True
+    info.cfa_raw = False
+    info.width = shape[1]
+    info.height = shape[0]
+    info.nchan = shape[2]
+    info.maxval = maxval
+    info.isfloat = True
+    info.bitdepth = 32
+    info.bytedepth = 4
     info = _complete(info)
     return info
 
@@ -147,6 +172,7 @@ def _read_exif(filespec):
         info = ImageInfo()
         info.filespec = filespec
         info.filetype = "exif"
+        info.isfloat = False
         info.cfa_raw = exif.get(piexif.ImageIFD.PhotometricInterpretation) in [32803, 34892]
         info.width = exif.get(piexif.ImageIFD.ImageWidth)
         info.height = exif.get(piexif.ImageIFD.ImageLength)
@@ -166,6 +192,7 @@ def _read_jpeg(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "jpeg"
+    info.isfloat = False
     info.cfa_raw = False
     data = jpeghdr.Jpeg.from_file(filespec)
     for seg in data.segments:
@@ -183,6 +210,6 @@ def _complete(info):
     info.filesize = os.path.getsize(info.filespec)
     info.maxval = info.maxval or 2 ** info.bitdepth - 1
     info.bitdepth = info.bitdepth or int(math.log2(info.maxval + 1))
-    info.bytedepth = 2 if info.maxval > 255 else 1
+    info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
     info.nbytes = info.width * info.height * info.nchan * info.bytedepth
     return info
