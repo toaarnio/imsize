@@ -19,7 +19,7 @@ def dims(filespec, verbose=False):
     (typically 255, 1023, 4095, or 65535).
     """
     with open(filespec, "rb") as f:
-        header = f.readline()
+        header = f.read(64)  # should be enough for any valid header
         shape, maxval = __parse_header(header, filespec, verbose)
         return (shape, maxval)
 
