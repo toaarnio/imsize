@@ -141,7 +141,7 @@ def _read_pnm(filespec):
     info.cfa_raw = False
     info.width = shape[1]
     info.height = shape[0]
-    info.nchan = shape[2]
+    info.nchan = 1 if len(shape) < 3 else shape[2]
     info.maxval = maxval
     info = _complete(info)
     return info
@@ -156,7 +156,7 @@ def _read_pfm(filespec):
     info.cfa_raw = False
     info.width = shape[1]
     info.height = shape[0]
-    info.nchan = shape[2]
+    info.nchan = 1 if len(shape) < 3 else shape[2]
     info.maxval = maxval
     info.isfloat = True
     info.bitdepth = 32
