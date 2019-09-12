@@ -19,7 +19,7 @@ except ImportError:
     import argv
 
 
-FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.dng"]
+FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.dng", "*.raw"]
 
 
 def main():
@@ -77,7 +77,8 @@ def scan_sizes(filespecs, verbose):
             total_compressed += info.filesize / 1024**2
             if verbose:
                 megs = info.nbytes / 1024**2
-                print(f"{basename}: {info.width} x {info.height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB")
+                est = " [estimated]" if info.uncertain else ""
+                print(f"{basename}: {info.width} x {info.height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}")
     print(f"Scanned {num_processed} images, total {total_compressed:.1f} MB compressed, {total_uncompressed:.1f} MB uncompressed")
 
 

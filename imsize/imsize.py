@@ -4,6 +4,7 @@ import os              # built-in library
 import math            # built-in library
 import pprint          # built-in library
 import piexif          # pip install piexif
+import numpy as np     # pip install numpy
 
 try:
     # package mode
@@ -43,6 +44,7 @@ class ImageInfo:
       bytedepth (int): Bytes per sample: 1, 2 or 4
       maxval (int): Maximum representable sample value, e.g., 255
       nbytes (int): Size of the image in bytes, uncompressed
+      uncertain (bool): True if width/height/bitdepth are uncertain
     """
     def __init__(self):
         self.filespec = None
@@ -57,6 +59,7 @@ class ImageInfo:
         self.bytedepth = None
         self.maxval = None
         self.nbytes = None
+        self.uncertain = None
 
     def __repr__(self):
         classname = self.__class__
@@ -96,7 +99,8 @@ def read(filespec):
                 "tif": _read_exif,
                 "webp": _read_exif,
                 "dng": _read_exif,
-                "cr2": _read_exif}
+                "cr2": _read_exif,
+                "raw": _read_raw}
     if filetype in handlers:
         handler = handlers[filetype]
         info = handler(filespec)
@@ -206,10 +210,44 @@ def _read_jpeg(filespec):
     return info
 
 
+def _read_raw(filespec):  # this is just guessing based on file size
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "raw"
+    info.uncertain = True
+    info.isfloat = False
+    info.cfa_raw = True
+    info.nchan = 1
+    info.bytedepth = 2  # all sensors are at least 10-bit these days
+    info.bitdepth = 12
+    info.filesize = os.path.getsize(filespec)
+    for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
+        numpixels = info.filesize / info.bytedepth
+        info.height = math.sqrt(numpixels * aspect)
+        info.width = numpixels / info.height
+        isint = lambda v: int(v) == v
+        if isint(info.width) and isint(info.height):
+            info.width = int(info.width)
+            info.height = int(info.height)
+            break
+    if info.width is None:
+        print(f"Unable to guess the dimensions of {filespec}.")
+        return None
+    else:
+        raw = np.fromfile(filespec, dtype='<u2')  # assume x86 byte order
+        atleast_12bit = np.max(raw) >= 2**10
+        probably_10bit = np.min(raw) < 100
+        info.bitdepth = 10 if probably_10bit else 12
+        info.bitdepth = 12 if atleast_12bit else info.bitdepth
+        info = _complete(info)
+        return info
+
+
 def _complete(info):
-    info.filesize = os.path.getsize(info.filespec)
+    info.filesize = info.filesize or os.path.getsize(info.filespec)
     info.maxval = info.maxval or 2 ** info.bitdepth - 1
     info.bitdepth = info.bitdepth or int(math.log2(info.maxval + 1))
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
     info.nbytes = info.width * info.height * info.nchan * info.bytedepth
+    info.uncertain = False if info.uncertain is None else info.uncertain
     return info
