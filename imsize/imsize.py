@@ -4,6 +4,7 @@ import os              # built-in library
 import math            # built-in library
 import pprint          # built-in library
 import piexif          # pip install piexif
+import rawpy           # pip install rawpy
 import numpy as np     # pip install numpy
 
 try:
@@ -33,7 +34,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: "png", "pnm", "pfm", "jpeg" or "exif"
+      filetype (str): File type: png|pnm|pfm|jpeg|exif|cr2|nef|raw
       filesize (int): Size of the file on disk in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
@@ -99,7 +100,8 @@ def read(filespec):
                 "tif": _read_exif,
                 "webp": _read_exif,
                 "dng": _read_exif,
-                "cr2": _read_exif,
+                "cr2": _read_cr2,
+                "nef": _read_nef,
                 "raw": _read_raw}
     if filetype in handlers:
         handler = handlers[filetype]
@@ -169,6 +171,24 @@ def _read_pfm(filespec):
     return info
 
 
+def _read_jpeg(filespec):
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "jpeg"
+    info.isfloat = False
+    info.cfa_raw = False
+    data = jpeghdr.Jpeg.from_file(filespec)
+    for seg in data.segments:
+        if seg.marker == seg.MarkerEnum.sof0:
+            info.width = seg.data.image_width
+            info.height = seg.data.image_height
+            info.nchan = seg.data.num_components
+            info.bitdepth = seg.data.bits_per_sample
+            info = _complete(info)
+            break
+    return info
+
+
 def _read_exif(filespec):
     try:
         exif = piexif.load(filespec)
@@ -192,34 +212,53 @@ def _read_exif(filespec):
         return None
 
 
-def _read_jpeg(filespec):
+def _read_cr2(filespec):
+    exif = piexif.load(filespec)
+    exif = exif.pop("0th")
     info = ImageInfo()
     info.filespec = filespec
-    info.filetype = "jpeg"
+    info.filetype = "cr2"
+    info.uncertain = True
     info.isfloat = False
-    info.cfa_raw = False
-    data = jpeghdr.Jpeg.from_file(filespec)
-    for seg in data.segments:
-        if seg.marker == seg.MarkerEnum.sof0:
-            info.width = seg.data.image_width
-            info.height = seg.data.image_height
-            info.nchan = seg.data.num_components
-            info.bitdepth = seg.data.bits_per_sample
-            info = _complete(info)
-            break
+    info.cfa_raw = True
+    info.width = exif.get(piexif.ImageIFD.ImageWidth)
+    info.height = exif.get(piexif.ImageIFD.ImageLength)
+    info.nchan = 1
+    info.bytedepth = 2
+    info.bitdepth = 14  # 14-bit since Canon 450D (2008)
+    info = _complete(info)
     return info
 
 
-def _read_raw(filespec):  # this is just guessing based on file size
+def _read_nef(filespec):  # reading the whole file ==> SLOW
+    raw = rawpy.imread(filespec)
+    raw = raw.raw_image_visible
     info = ImageInfo()
     info.filespec = filespec
-    info.filetype = "raw"
+    info.filetype = "nef"
     info.uncertain = True
     info.isfloat = False
     info.cfa_raw = True
     info.nchan = 1
+    info.bytedepth = 2
+    info.height, info.width = raw.shape
+    minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
+    minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
+    minbits = max(minbits, 12)  # 12, 14, 16
+    info.bitdepth = int(minbits)  # will fail if image is very dark
+    info = _complete(info)
+    return info
+
+
+def _read_raw(filespec):  # reading the whole file ==> SLOW
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "raw"
+    info.uncertain = True  # width, height & bitdepth are guessed
+    info.isfloat = False
+    info.cfa_raw = True
+    info.nchan = 1
     info.bytedepth = 2  # all sensors are at least 10-bit these days
-    info.bitdepth = 12
     info.filesize = os.path.getsize(filespec)
     for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
         numpixels = info.filesize / info.bytedepth
@@ -235,10 +274,10 @@ def _read_raw(filespec):  # this is just guessing based on file size
         return None
     else:
         raw = np.fromfile(filespec, dtype='<u2')  # assume x86 byte order
-        atleast_12bit = np.max(raw) >= 2**10
-        probably_10bit = np.min(raw) < 100
-        info.bitdepth = 10 if probably_10bit else 12
-        info.bitdepth = 12 if atleast_12bit else info.bitdepth
+        minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
+        minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
+        minbits = max(minbits, 10)  # 10, 12, 14, 16
+        info.bitdepth = int(minbits)  # will fail if image is very dark
         info = _complete(info)
         return info
 

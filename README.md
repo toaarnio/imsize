@@ -4,7 +4,7 @@
 
 Lightning-fast extraction of image dimensions & bit depth. Tested on Python 3.6+.
 
-Supports PGM / PPM / PNM / PFM / PNG / JPG / TIFF / INSP / DNG / RAW.
+Supports PGM / PPM / PNM / PFM / PNG / JPG / TIFF / INSP / DNG / CR2 / NEF / RAW.
 
 **Installing on Linux:**
 ```

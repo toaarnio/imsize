@@ -3,7 +3,8 @@
 """
 Calculates the combined in-memory size of the given images by parsing
 their header information. Runs very fast because only the header part
-of a file is read from disk.
+of a file is read from disk (except for headerless Camera RAW and Nikon
+NEF).
 """
 
 import os              # built-in library
@@ -19,7 +20,7 @@ except ImportError:
     import argv
 
 
-FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.dng", "*.raw"]
+FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.dng", "*.cr2", "*.nef", "*.raw"]
 
 
 def main():
@@ -31,7 +32,7 @@ def main():
         print()
         print("  Displays the dimensions and uncompressed sizes of the given images.")
         print("  Runs very fast because only the header part of a file is read from")
-        print("  disk.")
+        print("  disk (except for headerless Camera RAW and Nikon NEF).")
         print()
         print("  options:")
         print("    --quiet             do not show per-image information")
