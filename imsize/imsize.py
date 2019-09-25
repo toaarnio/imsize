@@ -34,7 +34,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|jpeg|exif|cr2|nef|raw
+      filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|webp|dng|cr2|nef|raw
       filesize (int): Size of the file on disk in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
@@ -95,11 +95,11 @@ def read(filespec):
                 "pfm": _read_pfm,
                 "jpeg": _read_jpeg,
                 "jpg": _read_jpeg,
-                "insp": _read_jpeg,
-                "tiff": _read_exif,
-                "tif": _read_exif,
-                "webp": _read_exif,
-                "dng": _read_exif,
+                "insp": _read_insp,
+                "tiff": _read_tiff,
+                "tif": _read_tiff,
+                "webp": _read_webp,
+                "dng": _read_dng,
                 "cr2": _read_cr2,
                 "nef": _read_nef,
                 "raw": _read_raw}
@@ -189,6 +189,12 @@ def _read_jpeg(filespec):
     return info
 
 
+def _read_insp(filespec):
+    info = _read_jpeg(filespec)
+    info.filetype = "insp"
+    return info
+
+
 def _read_exif(filespec):
     try:
         exif = piexif.load(filespec)
@@ -210,6 +216,24 @@ def _read_exif(filespec):
     except (TypeError, ValueError):
         print(f"Unable to parse {filespec}: missing/broken EXIF metadata.")
         return None
+
+
+def _read_webp(filespec):
+    info = _read_exif(filespec)
+    info.filetype = "webp"
+    return info
+
+
+def _read_tiff(filespec):
+    info = _read_exif(filespec)
+    info.filetype = "tiff"
+    return info
+
+
+def _read_dng(filespec):
+    info = _read_exif(filespec)
+    info.filetype = "dng"
+    return info
 
 
 def _read_cr2(filespec):
