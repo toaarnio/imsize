@@ -24,6 +24,9 @@ FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.jpeg", "*.jpg", "*.
 
 
 def main():
+    """
+    Entry point for the 'imsize' command-line application.
+    """
     verbose = not argv.exists("--quiet")
     show_help = argv.exists("--help")
     argv.exitIfAnyUnparsedOptions()
@@ -54,6 +57,9 @@ def main():
 
 
 def find_files(paths):
+    """
+    Collects all files with known filetypes from the given list of directories.
+    """
     allfiles = []
     for path in paths:
         if os.path.isdir(path):
@@ -66,6 +72,9 @@ def find_files(paths):
 
 
 def scan_sizes(filespecs, verbose):
+    """
+    Displays the dimensions of the given list of images.
+    """
     total_compressed = 0
     total_uncompressed = 0
     num_processed = 0
@@ -79,7 +88,11 @@ def scan_sizes(filespecs, verbose):
             if verbose:
                 megs = info.nbytes / 1024**2
                 est = " [estimated]" if info.uncertain else ""
-                print(f"{basename}: {info.width} x {info.height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}")
+                if info.rot90_ccw_steps in [0, 2]:
+                    width, height = (info.width, info.height)
+                else:
+                    width, height = (info.height, info.width)
+                print(f"{basename}: {width} x {height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}")
     print(f"Scanned {num_processed} images, total {total_compressed:.1f} MB compressed, {total_uncompressed:.1f} MB uncompressed")
 
 

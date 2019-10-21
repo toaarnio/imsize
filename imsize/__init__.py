@@ -1,5 +1,5 @@
 """
-Extracts image dimensions & bit depth.
+Extracts image dimensions, bit depth, and other basic metadata.
 
 Example:
   info = imsize.read("myfile.jpg")
@@ -9,7 +9,7 @@ Example:
 https://github.com/toaarnio/imsize
 """
 
-from .imsize import *
+from .imsize import read, ImageInfo
 
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 __all__ = ["read", "ImageInfo"]

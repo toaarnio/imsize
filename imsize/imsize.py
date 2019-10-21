@@ -1,5 +1,9 @@
 #!/usr/bin/python3 -B
 
+"""
+Extracts image dimensions, bit depth, and other basic metadata.
+"""
+
 import os              # built-in library
 import math            # built-in library
 import pprint          # built-in library
@@ -45,6 +49,8 @@ class ImageInfo:
       bytedepth (int): Bytes per sample: 1, 2 or 4
       maxval (int): Maximum representable sample value, e.g., 255
       nbytes (int): Size of the image in bytes, uncompressed
+      orientation (int): Image orientation in EXIF format: 1 to 8
+      rot90_ccw_steps (int): Number of rotations to bring the image upright: 0 to 3
       uncertain (bool): True if width/height/bitdepth are uncertain
     """
     def __init__(self):
@@ -60,11 +66,11 @@ class ImageInfo:
         self.bytedepth = None
         self.maxval = None
         self.nbytes = None
+        self.orientation = None
+        self.rot90_ccw_steps = None
         self.uncertain = None
 
     def __repr__(self):
-        classname = self.__class__
-        elements = self.__dict__
         reprstr = f"<ImageInfo {self.__dict__}>"
         return reprstr
 
@@ -208,6 +214,10 @@ def _read_exif(filespec):
         info.height = exif.get(piexif.ImageIFD.ImageLength)
         info.nchan = exif.get(piexif.ImageIFD.SamplesPerPixel)
         info.bitdepth = exif.get(piexif.ImageIFD.BitsPerSample)
+        info.orientation = exif.get(piexif.ImageIFD.Orientation)
+        exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
+        if info.orientation in exif_to_rot90:
+            info.rot90_ccw_steps = exif_to_rot90[info.orientation]
         if isinstance(info.bitdepth, tuple):
             info.nchan = len(info.bitdepth)
             info.bitdepth = info.bitdepth[0]
@@ -288,22 +298,21 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
         numpixels = info.filesize / info.bytedepth
         info.height = math.sqrt(numpixels * aspect)
         info.width = numpixels / info.height
-        isint = lambda v: int(v) == v
-        if isint(info.width) and isint(info.height):
+        if int(info.width) == info.width and int(info.height) == info.height:
             info.width = int(info.width)
             info.height = int(info.height)
             break
-    if info.width is None:
-        print(f"Unable to guess the dimensions of {filespec}.")
-        return None
-    else:
+    if info.width is not None:
         raw = np.fromfile(filespec, dtype='<u2')  # assume x86 byte order
         minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
         minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
         minbits = max(minbits, 10)  # 10, 12, 14, 16
         info.bitdepth = int(minbits)  # will fail if image is very dark
         info = _complete(info)
-        return info
+    else:
+        print(f"Unable to guess the dimensions of {filespec}.")
+        info = None
+    return info
 
 
 def _complete(info):
@@ -313,4 +322,6 @@ def _complete(info):
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
     info.nbytes = info.width * info.height * info.nchan * info.bytedepth
     info.uncertain = False if info.uncertain is None else info.uncertain
+    info.orientation = info.orientation or 1  # None => 1
+    info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0
     return info
