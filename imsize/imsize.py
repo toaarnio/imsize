@@ -6,6 +6,7 @@ Extracts image dimensions, bit depth, and other basic metadata.
 
 import os              # built-in library
 import math            # built-in library
+import struct          # built-in library
 import pprint          # built-in library
 import piexif          # pip install piexif
 import rawpy           # pip install rawpy
@@ -13,14 +14,10 @@ import numpy as np     # pip install numpy
 
 try:
     # package mode
-    from imsize import pnghdr   # local import: pnghdr.py
-    from imsize import jpeghdr  # local import: jpeghdr.py
     from imsize import pnmhdr   # local import: pnmhdr.py
     from imsize import pfmhdr   # local import: pfmhdr.py
 except ImportError:
     # stand-alone mode
-    import pnghdr
-    import jpeghdr
     import pnmhdr
     import pfmhdr
 
@@ -38,7 +35,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|webp|dng|cr2|nef|raw
+      filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|dng|cr2|nef|raw
       filesize (int): Size of the file on disk in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
@@ -104,7 +101,6 @@ def read(filespec):
                 "insp": _read_insp,
                 "tiff": _read_tiff,
                 "tif": _read_tiff,
-                "webp": _read_webp,
                 "dng": _read_dng,
                 "cr2": _read_cr2,
                 "nef": _read_nef,
@@ -124,30 +120,31 @@ def read(filespec):
 
 
 def _read_png(filespec):
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "png"
+    info.isfloat = False
+    info.cfa_raw = False
     with open(filespec, "rb") as f:
-        header = pnghdr.Png.from_io(f)
-        colortype = pnghdr.Png.ColorType
-        nchannels = {colortype.greyscale: 1,
-                     colortype.truecolor: 3,
-                     colortype.indexed: 3,
-                     colortype.greyscale_alpha: 2,
-                     colortype.truecolor_alpha: 4}
-        info = ImageInfo()
-        info.filespec = filespec
-        info.filetype = "png"
-        info.isfloat = False
-        info.cfa_raw = False
-        info.width = header.ihdr.width
-        info.height = header.ihdr.height
-        info.nchan = nchannels[header.ihdr.color_type]
-        info.bitdepth = header.ihdr.bit_depth
+        header = f.read(26)
+        signature = bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+        if header.startswith(signature) and header[12:16] == b"IHDR":
+            ihdr = struct.unpack(">LLBB", header[16:26])
+        info.width = ihdr[0]
+        info.height = ihdr[1]
+        info.bitdepth = ihdr[2]
+        info.nchan = {0: 1,           # greyscale => 1 channel
+                      2: 3,           # truecolor => 3 channels
+                      3: 3,           # indexed => 3 channels
+                      4: 2,           # greyscale_alpha => 2 channels
+                      6: 4}[ihdr[3]]  # truecolor_alpha => 4 channels
         info = _complete(info)
         return info
 
 
 def _read_pnm(filespec):
-    shape, maxval = pnmhdr.dims(filespec)
     info = ImageInfo()
+    shape, maxval = pnmhdr.dims(filespec)
     info.filespec = filespec
     info.filetype = "pnm"
     info.isfloat = False
@@ -161,8 +158,8 @@ def _read_pnm(filespec):
 
 
 def _read_pfm(filespec):
-    shape, maxval = pfmhdr.dims(filespec)
     info = ImageInfo()
+    shape, maxval = pfmhdr.dims(filespec)
     info.filespec = filespec
     info.filetype = "pfm"
     info.isfloat = True
@@ -179,21 +176,24 @@ def _read_pfm(filespec):
 
 
 def _read_jpeg(filespec):
-    info = ImageInfo()
+    info = _read_exif_orientation(filespec)
     info.filespec = filespec
     info.filetype = "jpeg"
     info.isfloat = False
     info.cfa_raw = False
     with open(filespec, "rb") as f:
-        data = jpeghdr.Jpeg.from_io(f)
-        for seg in data.segments:
-            if seg.marker == seg.MarkerEnum.sof0:
-                info.width = seg.data.image_width
-                info.height = seg.data.image_height
-                info.nchan = seg.data.num_components
-                info.bitdepth = seg.data.bits_per_sample
-                info = _complete(info)
-                break
+        if f.read(2) == b"\xff\xd8":
+            size = 2
+            segtype = 0
+            while not 0xc0 <= segtype <= 0xcf or segtype in [0xc4, 0xc8, 0xcc]:
+                f.seek(size - 2, 1)  # skip to next segment
+                _0xff, segtype, size = struct.unpack(">BBH", f.read(4))
+            sof = struct.unpack(">BHHB", f.read(6))
+            info.bitdepth = sof[0]
+            info.height = sof[1]
+            info.width = sof[2]
+            info.nchan = sof[3]
+            info = _complete(info)
     return info
 
 
@@ -203,36 +203,37 @@ def _read_insp(filespec):
     return info
 
 
+def _read_exif_orientation(filespec):
+    info = ImageInfo()
+    exif = piexif.load(filespec)
+    exif = exif.pop("0th")
+    info.orientation = exif.get(piexif.ImageIFD.Orientation)
+    exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
+    if info.orientation in exif_to_rot90:
+        info.rot90_ccw_steps = exif_to_rot90[info.orientation]
+    return info
+
+
 def _read_exif(filespec):
-    try:
-        exif = piexif.load(filespec)
-        exif = exif.pop("0th")
-        info = ImageInfo()
-        info.filespec = filespec
-        info.filetype = "exif"
-        info.isfloat = False
-        info.cfa_raw = exif.get(piexif.ImageIFD.PhotometricInterpretation) in [32803, 34892]
-        info.width = exif.get(piexif.ImageIFD.ImageWidth)
-        info.height = exif.get(piexif.ImageIFD.ImageLength)
-        info.nchan = exif.get(piexif.ImageIFD.SamplesPerPixel)
-        info.bitdepth = exif.get(piexif.ImageIFD.BitsPerSample)
-        info.orientation = exif.get(piexif.ImageIFD.Orientation)
-        exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
-        if info.orientation in exif_to_rot90:
-            info.rot90_ccw_steps = exif_to_rot90[info.orientation]
-        if isinstance(info.bitdepth, tuple):
-            info.nchan = len(info.bitdepth)
-            info.bitdepth = info.bitdepth[0]
-        info = _complete(info)
-        return info
-    except (TypeError, ValueError):
-        print(f"Unable to parse {filespec}: missing/broken EXIF metadata.")
-        return None
-
-
-def _read_webp(filespec):
-    info = _read_exif(filespec)
-    info.filetype = "webp"
+    info = ImageInfo()
+    exif = piexif.load(filespec)
+    exif = exif.pop("0th")
+    info.filespec = filespec
+    info.filetype = "exif"
+    info.isfloat = False
+    info.cfa_raw = exif.get(piexif.ImageIFD.PhotometricInterpretation) in [32803, 34892]
+    info.width = exif.get(piexif.ImageIFD.ImageWidth)
+    info.height = exif.get(piexif.ImageIFD.ImageLength)
+    info.nchan = exif.get(piexif.ImageIFD.SamplesPerPixel)
+    info.bitdepth = exif.get(piexif.ImageIFD.BitsPerSample)
+    info.orientation = exif.get(piexif.ImageIFD.Orientation)
+    exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
+    if info.orientation in exif_to_rot90:
+        info.rot90_ccw_steps = exif_to_rot90[info.orientation]
+    if isinstance(info.bitdepth, tuple):
+        info.nchan = len(info.bitdepth)
+        info.bitdepth = info.bitdepth[0]
+    info = _complete(info)
     return info
 
 

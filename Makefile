@@ -2,6 +2,9 @@ lint:
 	flake8 imsize/imsize.py imsize/consoleapp.py
 	pylint imsize/imsize.py imsize/consoleapp.py
 
+test:
+	python3 setup.py test
+
 install:
 	pip3 uninstall --yes imsize || true
 	rm -rf build dist imsize.egg-info || true
@@ -14,4 +17,4 @@ release:
 	make install
 	twine upload dist/*
 
-.PHONY: lint install release
+.PHONY: lint test install release

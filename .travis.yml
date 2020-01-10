@@ -9,5 +9,4 @@ install:
   - pip install flake8
   - pip install pylint
 script:
-  - python setup.py test
-  - make lint
+  - make lint test
