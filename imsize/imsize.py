@@ -124,24 +124,25 @@ def read(filespec):
 
 
 def _read_png(filespec):
-    header = pnghdr.Png.from_file(filespec)
-    colortype = pnghdr.Png.ColorType
-    nchannels = {colortype.greyscale: 1,
-                 colortype.truecolor: 3,
-                 colortype.indexed: 3,
-                 colortype.greyscale_alpha: 2,
-                 colortype.truecolor_alpha: 4}
-    info = ImageInfo()
-    info.filespec = filespec
-    info.filetype = "png"
-    info.isfloat = False
-    info.cfa_raw = False
-    info.width = header.ihdr.width
-    info.height = header.ihdr.height
-    info.nchan = nchannels[header.ihdr.color_type]
-    info.bitdepth = header.ihdr.bit_depth
-    info = _complete(info)
-    return info
+    with open(filespec, "rb") as f:
+        header = pnghdr.Png.from_io(f)
+        colortype = pnghdr.Png.ColorType
+        nchannels = {colortype.greyscale: 1,
+                     colortype.truecolor: 3,
+                     colortype.indexed: 3,
+                     colortype.greyscale_alpha: 2,
+                     colortype.truecolor_alpha: 4}
+        info = ImageInfo()
+        info.filespec = filespec
+        info.filetype = "png"
+        info.isfloat = False
+        info.cfa_raw = False
+        info.width = header.ihdr.width
+        info.height = header.ihdr.height
+        info.nchan = nchannels[header.ihdr.color_type]
+        info.bitdepth = header.ihdr.bit_depth
+        info = _complete(info)
+        return info
 
 
 def _read_pnm(filespec):
@@ -183,15 +184,16 @@ def _read_jpeg(filespec):
     info.filetype = "jpeg"
     info.isfloat = False
     info.cfa_raw = False
-    data = jpeghdr.Jpeg.from_file(filespec)
-    for seg in data.segments:
-        if seg.marker == seg.MarkerEnum.sof0:
-            info.width = seg.data.image_width
-            info.height = seg.data.image_height
-            info.nchan = seg.data.num_components
-            info.bitdepth = seg.data.bits_per_sample
-            info = _complete(info)
-            break
+    with open(filespec, "rb") as f:
+        data = jpeghdr.Jpeg.from_io(f)
+        for seg in data.segments:
+            if seg.marker == seg.MarkerEnum.sof0:
+                info.width = seg.data.image_width
+                info.height = seg.data.image_height
+                info.nchan = seg.data.num_components
+                info.bitdepth = seg.data.bits_per_sample
+                info = _complete(info)
+                break
     return info
 
 
