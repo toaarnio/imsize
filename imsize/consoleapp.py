@@ -79,8 +79,12 @@ def scan_sizes(filespecs, verbose):
     total_uncompressed = 0
     num_processed = 0
     for filespec in sorted(filespecs):
-        info = imsize.read(filespec)
         basename = os.path.basename(filespec)
+        try:
+            info = imsize.read(filespec)
+        except RuntimeError as e:
+            print(f"{basename}: Skipping: {e}")
+            continue
         if info is not None:
             num_processed += 1
             total_uncompressed += info.nbytes / 1024**2
