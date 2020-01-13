@@ -1,3 +1,6 @@
+deps:
+	pip3 install -r requirements.txt
+
 lint:
 	flake8 imsize/imsize.py imsize/consoleapp.py
 	pylint imsize/imsize.py imsize/consoleapp.py
@@ -17,4 +20,4 @@ release:
 	make install
 	twine upload dist/*
 
-.PHONY: lint test install release
+.PHONY: deps lint test install release
