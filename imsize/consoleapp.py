@@ -91,12 +91,13 @@ def scan_sizes(filespecs, verbose):
             total_compressed += info.filesize / 1024**2
             if verbose:
                 megs = info.nbytes / 1024**2
+                mpix = info.width * info.height / 1000000
                 est = " [estimated]" if info.uncertain else ""
                 if info.rot90_ccw_steps in [0, 2]:
                     width, height = (info.width, info.height)
                 else:
                     width, height = (info.height, info.width)
-                print(f"{basename}: {width} x {height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}")
+                print(f"{basename}: {width} x {height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}, {mpix:.1f} MP")
     print(f"Scanned {num_processed} images, total {total_compressed:.1f} MB compressed, {total_uncompressed:.1f} MB uncompressed")
 
 
