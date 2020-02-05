@@ -28,6 +28,24 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.nbytes, 600 * 450 * 3)
             self.assertEqual(info.orientation, 1)
 
+    def test_dng(self):
+        dngs = glob.glob(os.path.join(imagedir, "*.dng"))
+        self.assertTrue(len(dngs) > 0)
+        for i, dng in enumerate(sorted(dngs)):
+            info = imsize.read(dng)
+            self.assertEqual(info.filetype, "dng")
+            self.assertEqual(info.nchan, 1)
+            self.assertTrue(info.width, 7296)
+            self.assertTrue(info.height, 3648)
+            self.assertEqual(info.bitdepth, 12)
+            self.assertEqual(info.bytedepth, 2)
+            self.assertEqual(info.maxval, 4095)
+            self.assertEqual(info.isfloat, False)
+            self.assertEqual(info.uncertain, False)
+            self.assertEqual(info.cfa_raw, True)
+            self.assertEqual(info.nbytes, 7296 * 3648 * 2)
+            self.assertEqual(info.orientation, 1)
+
     def test_orientations(self):
         jpegs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.jpg")))
         tiffs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.tif")))

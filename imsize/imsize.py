@@ -9,6 +9,7 @@ import math            # built-in library
 import struct          # built-in library
 import pprint          # built-in library
 import piexif          # pip install piexif
+import pyexiv2         # pip install pyexiv2
 import rawpy           # pip install rawpy
 import numpy as np     # pip install numpy
 
@@ -216,23 +217,26 @@ def _read_exif_orientation(filespec):
 
 def _read_exif(filespec):
     info = ImageInfo()
-    exif = piexif.load(filespec)
-    exif = exif.pop("0th")
     info.filespec = filespec
     info.filetype = "exif"
     info.isfloat = False
-    info.cfa_raw = exif.get(piexif.ImageIFD.PhotometricInterpretation) in [32803, 34892]
-    info.width = exif.get(piexif.ImageIFD.ImageWidth)
-    info.height = exif.get(piexif.ImageIFD.ImageLength)
-    info.nchan = exif.get(piexif.ImageIFD.SamplesPerPixel)
-    info.bitdepth = exif.get(piexif.ImageIFD.BitsPerSample)
-    info.orientation = exif.get(piexif.ImageIFD.Orientation)
+    img = pyexiv2.Image(filespec)
+    exif = img.read_exif()
+    subimages = ["Image", "SubImage1", "SubImage2", "SubImage3"]
+    widths = [exif.get(f"Exif.{sub}.ImageWidth") for sub in subimages]
+    widths = [int(w or 0) for w in widths]  # None => 0
+    maximg = subimages[np.argmax(widths)]  # use the largest sub-image
+    info.cfa_raw = exif.get(f"Exif.{maximg}.PhotometricInterpretation") in ['32803', '34892']
+    info.width = int(exif.get(f"Exif.{maximg}.ImageWidth"))
+    info.height = int(exif.get(f"Exif.{maximg}.ImageLength"))
+    info.nchan = int(exif.get(f"Exif.{maximg}.SamplesPerPixel"))
+    info.bitdepth = exif.get(f"Exif.{maximg}.BitsPerSample")
+    info.orientation = int(exif.get(f"Exif.{maximg}.Orientation") or 1)
     exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
     if info.orientation in exif_to_rot90:
         info.rot90_ccw_steps = exif_to_rot90[info.orientation]
-    if isinstance(info.bitdepth, tuple):
-        info.nchan = len(info.bitdepth)
-        info.bitdepth = info.bitdepth[0]
+    bitdepths = tuple(int(el) for el in info.bitdepth.split(" "))  # string => tuple of ints
+    info.bitdepth = bitdepths[0]
     info = _complete(info)
     return info
 
