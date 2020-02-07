@@ -5,7 +5,12 @@ lint:
 	flake8 imsize/imsize.py imsize/consoleapp.py
 	pylint imsize/imsize.py imsize/consoleapp.py
 
-test:
+download:
+ifeq (,$(wildcard ./test/images/*.DNG))
+	cd ./test/images && http --download https://support.theta360.com/intl/download/sample/R0010001.DNG
+endif
+
+test: download
 	python3 setup.py test
 
 install:
@@ -20,4 +25,4 @@ release:
 	make install
 	twine upload dist/*
 
-.PHONY: deps lint test install release
+.PHONY: deps lint download test install release

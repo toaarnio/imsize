@@ -29,7 +29,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.orientation, 1)
 
     def test_dng(self):
-        dngs = glob.glob(os.path.join(imagedir, "*.dng"))
+        dngs = glob.glob(os.path.join(imagedir, "*.DNG"))
         self.assertTrue(len(dngs) > 0)
         for i, dng in enumerate(sorted(dngs)):
             info = imsize.read(dng)
