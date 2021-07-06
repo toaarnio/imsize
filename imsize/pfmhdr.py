@@ -12,16 +12,16 @@ import re  # built-in library
 #
 ######################################################################################
 
+
 def dims(filespec, verbose=False):
     """
     Returns the dimensions (width, height, and number of channels) of the given
-    PGM/PPM file. Also returns the maximum representable value of a pixel
-    (typically 255, 1023, 4095, or 65535).
+    PFM file. Also returns the nominal scale of the pixel values (typically 1.0).
     """
     with open(filespec, "rb") as f:
         header = f.read(64)  # should be enough for any valid header
-        shape, maxval = __parse_header(header, filespec, verbose)
-        return (shape, maxval)
+        shape, scale = __parse_header(header, filespec, verbose)
+        return (shape, scale)
 
 
 ######################################################################################
