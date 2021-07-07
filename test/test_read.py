@@ -46,6 +46,20 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.nbytes, 7296 * 3648 * 2)
             self.assertEqual(info.orientation, 1)
 
+    def test_exr(self):
+        exrs = glob.glob(os.path.join(imagedir, "*.exr"))
+        self.assertTrue(len(exrs) > 0)
+        for i, exr in enumerate(sorted(exrs)):
+            info = imsize.read(exr)
+            self.assertEqual(info.filetype, "exr")
+            self.assertEqual(info.isfloat, True)
+            self.assertEqual(info.cfa_raw, False)
+            self.assertEqual(info.width, 800)
+            self.assertEqual(info.height, 800)
+            self.assertEqual(info.nchan, 1)
+            self.assertEqual(info.bitdepth, 16)
+            self.assertEqual(info.bytedepth, 2)
+
     def test_orientations(self):
         jpegs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.jpg")))
         tiffs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.tif")))
