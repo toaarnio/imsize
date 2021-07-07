@@ -17,10 +17,12 @@ try:
     # package mode
     from imsize import pnmhdr   # local import: pnmhdr.py
     from imsize import pfmhdr   # local import: pfmhdr.py
+    from imsize import exrhdr   # local import: exrhdr.py
 except ImportError:
     # stand-alone mode
     import pnmhdr
     import pfmhdr
+    import exrhdr
 
 
 ######################################################################################
@@ -36,7 +38,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|dng|cr2|nef|raw
+      filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|exr|dng|cr2|nef|raw
       filesize (int): Size of the file on disk in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
@@ -102,6 +104,7 @@ def read(filespec):
                 "insp": _read_insp,
                 "tiff": _read_tiff,
                 "tif": _read_tiff,
+                "exr": _read_exr,
                 "dng": _read_dng,
                 "cr2": _read_cr2,
                 "nef": _read_nef,
@@ -169,9 +172,25 @@ def _read_pfm(filespec):
     info.height = shape[0]
     info.nchan = 1 if len(shape) < 3 else shape[2]
     info.maxval = maxval
-    info.isfloat = True
     info.bitdepth = 32
     info.bytedepth = 4
+    info = _complete(info)
+    return info
+
+
+def _read_exr(filespec):
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "exr"
+    info.cfa_raw = False
+    info.maxval = 1.0
+    w, h, nchan, isfloat, bitdepth = exrhdr.dims(filespec)
+    info.width = w
+    info.height = h
+    info.nchan = nchan
+    info.isfloat = isfloat
+    info.bitdepth = bitdepth
+    info.bytedepth = bitdepth // 8
     info = _complete(info)
     return info
 
