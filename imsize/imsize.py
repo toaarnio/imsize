@@ -40,6 +40,7 @@ class ImageInfo:
       filespec (str): The filespec given to read(), copied verbatim
       filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|exr|dng|cr2|nef|raw
       filesize (int): Size of the file on disk in bytes
+      header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
       width (int): Width of the image in pixels (orientation ignored)
@@ -57,6 +58,7 @@ class ImageInfo:
         self.filespec = None
         self.filetype = None
         self.filesize = None
+        self.header_size = None
         self.isfloat = None
         self.cfa_raw = None
         self.width = None
@@ -319,15 +321,26 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     info.cfa_raw = True
     info.nchan = 1
     info.bytedepth = 2  # all sensors are at least 10-bit these days
+    info.header_size = 0  # assume no header
     info.filesize = os.path.getsize(filespec)
     for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
         numpixels = info.filesize / info.bytedepth
         info.height = math.sqrt(numpixels * aspect)
         info.width = numpixels / info.height
-        if int(info.width) == info.width and int(info.height) == info.height:
+        wrem4 = info.width % 4
+        hrem4 = info.height % 4
+        if wrem4 == 0 and hrem4 == 0:
             info.width = int(info.width)
             info.height = int(info.height)
             break
+        elif wrem4 < 0.5 and hrem4 < 0.5:
+            info.width = int(info.width)
+            info.height = int(info.height)
+            info.header_size = info.filesize - info.width * info.height * info.bytedepth
+            break
+        else:
+            info.width = None
+            info.height = None
     if info.width is not None:
         raw = np.fromfile(filespec, dtype='<u2')  # assume x86 byte order
         minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
@@ -349,4 +362,5 @@ def _complete(info):
     info.uncertain = False if info.uncertain is None else info.uncertain
     info.orientation = info.orientation or 1  # None => 1
     info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0
+    info.header_size = info.header_size or 0  # None => 0
     return info
