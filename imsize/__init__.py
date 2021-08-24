@@ -11,5 +11,5 @@ https://github.com/toaarnio/imsize
 
 from .imsize import read, ImageInfo
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __all__ = ["read", "ImageInfo"]
