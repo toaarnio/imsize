@@ -336,7 +336,6 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
         info.bitdepth = int(minbits)  # will fail if image is very dark
         info = _complete(info)
     else:
-        print(f"Unable to guess the dimensions of {filespec}.")
         info = None
     return info
 
