@@ -87,7 +87,9 @@ def scan_sizes(filespecs, verbose):
         except RuntimeError as e:
             print(f"{basename}: Skipping: {e}")
             continue
-        if info is not None:
+        if info is None:
+            print(f"{basename}: Unable to guess dimensions. Skipping.")
+        else:
             num_processed += 1
             total_uncompressed += info.nbytes / 1024**2
             total_compressed += info.filesize / 1024**2
