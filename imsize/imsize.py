@@ -333,14 +333,13 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
             info.width = int(info.width)
             info.height = int(info.height)
             break
-        elif wrem4 < 0.5 and hrem4 < 0.5:
+        if wrem4 < 0.5 and hrem4 < 0.5:
             info.width = int(info.width)
             info.height = int(info.height)
             info.header_size = info.filesize - info.width * info.height * info.bytedepth
             break
-        else:
-            info.width = None
-            info.height = None
+        info.width = None
+        info.height = None
     if info.width is not None:
         raw = np.fromfile(filespec, dtype='<u2')  # assume x86 byte order
         minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
