@@ -307,7 +307,7 @@ def _read_nef(filespec):  # reading the whole file ==> SLOW
     minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
     minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
     minbits = max(minbits, 12)  # 12, 14, 16
-    info.bitdepth = int(minbits)  # will fail if image is very dark
+    info.bitdepth = int(minbits)  # can underestimate bpp if image is very dark
     info = _complete(info)
     return info
 
@@ -341,11 +341,11 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
         info.width = None
         info.height = None
     if info.width is not None:
-        raw = np.fromfile(filespec, dtype='<u2')  # assume x86 byte order
+        raw = np.fromfile(filespec, dtype='<u2', offset=info.header_size)  # assume x86 byte order
         minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
         minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
         minbits = max(minbits, 10)  # 10, 12, 14, 16
-        info.bitdepth = int(minbits)  # will fail if image is very dark
+        info.bitdepth = int(minbits)  # can underestimate bpp if image is very dark
         info = _complete(info)
     else:
         info = None
