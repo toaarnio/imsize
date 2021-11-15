@@ -2,8 +2,7 @@ deps:
 	pip3 install -r requirements.txt
 
 lint:
-	flake8 imsize/imsize.py imsize/consoleapp.py
-	pylint imsize/imsize.py imsize/consoleapp.py
+	prospector imsize/imsize.py imsize/*hdr.py imsize/consoleapp.py
 
 download:
 ifeq (,$(wildcard ./test/images/*.DNG))

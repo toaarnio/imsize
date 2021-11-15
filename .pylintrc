@@ -12,5 +12,5 @@ good-names=f,w,h,c,i,j,k,x,y,z,r,g,b,e,assertRaisesRegex,assertRaisesRegexp
 # Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
 expected-line-ending-format=LF
 
-# Disable certain warnings that are not really applicable
-disable=too-many-instance-attributes,too-few-public-methods
+# Disable warnings that are not applicable to our coding style
+disable=too-many-instance-attributes,too-few-public-methods,too-many-locals,unused-variable
