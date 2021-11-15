@@ -26,7 +26,7 @@ def dims(filespec, verbose=False):
             got_dims = False
             while not (got_channels and got_dims):
                 attr_name = _read_string_nul(f, max_strlen)
-                attr_type = _read_string_nul(f, max_strlen)
+                _ = _read_string_nul(f, max_strlen)  # attr_type
                 attr_size = np.frombuffer(f.read(4), dtype="<u4")[0]
                 if attr_name == "channels":
                     nchan = 0
@@ -42,13 +42,13 @@ def dims(filespec, verbose=False):
                         else:
                             got_channels = True
                 elif attr_name == "dataWindow":
-                     box = np.frombuffer(f.read(16), dtype="<i4")
-                     xmin, ymin, xmax, ymax = box
-                     width = xmax - xmin + 1
-                     height = ymax - ymin + 1
-                     got_dims = True
+                    box = np.frombuffer(f.read(16), dtype="<i4")
+                    xmin, ymin, xmax, ymax = box
+                    width = xmax - xmin + 1
+                    height = ymax - ymin + 1
+                    got_dims = True
                 else:
-                    unknown = f.seek(attr_size, 1)
+                    _ = f.seek(attr_size, 1)
             if verbose:
                 print(f"Reading file {filespec} ", end='')
                 print(f"(w={width}, h={height}, c={nchan}, bitdepth={bitdepth})")
