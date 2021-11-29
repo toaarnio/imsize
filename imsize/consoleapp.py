@@ -29,6 +29,7 @@ def main():
     """
     Entry point for the 'imsize' command-line application.
     """
+    show_all = argv.exists("--all")
     verbose = not argv.exists("--quiet")
     show_help = argv.exists("--help")
     argv.exitIfAnyUnparsedOptions()
@@ -40,6 +41,7 @@ def main():
         print("  disk (except for headerless Camera RAW and Nikon NEF).")
         print()
         print("  options:")
+        print("    --all               show all extracted per-image metadata")
         print("    --quiet             do not show per-image information")
         print("    --help              show this help message")
         print()
@@ -55,7 +57,7 @@ def main():
             print("See 'imsize --help' for command-line options.")
         paths = sys.argv[1:] or ["."]  # scan current directory if no arguments
         filespecs = find_files(paths)
-        scan_sizes(filespecs, verbose)
+        scan_sizes(filespecs, verbose, show_all)
 
 
 def find_files(paths):
@@ -73,7 +75,7 @@ def find_files(paths):
     return allfiles
 
 
-def scan_sizes(filespecs, verbose):
+def scan_sizes(filespecs, verbose, show_all):
     """
     Displays the dimensions of the given list of images.
     """
@@ -88,7 +90,7 @@ def scan_sizes(filespecs, verbose):
             print(f"{basename}: Skipping: {e}")
             continue
         if info is None:
-            print(f"{basename}: Unable to guess dimensions. Skipping.")
+            print(f"{basename}: Unable to guess dimensions. Maybe not an image? Skipping.")
         else:
             num_processed += 1
             total_uncompressed += info.nbytes / 1024**2
@@ -102,6 +104,8 @@ def scan_sizes(filespecs, verbose):
                 else:
                     width, height = (info.height, info.width)
                 print(f"{basename}: {width} x {height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}, {mpix:.1f} MP")
+            if show_all:
+                print(info)
     print(f"Scanned {num_processed} images, total {total_compressed:.1f} MB compressed, {total_uncompressed:.1f} MB uncompressed")
 
 
