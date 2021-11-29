@@ -26,7 +26,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, False)
             self.assertEqual(info.nbytes, 600 * 450 * 3)
-            self.assertEqual(info.orientation, 1)
+            self.assertEqual(info.orientation, 0)
 
     def test_dng(self):
         dngs = glob.glob(os.path.join(imagedir, "*.DNG"))
@@ -44,7 +44,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, True)
             self.assertEqual(info.nbytes, 7296 * 3648 * 2)
-            self.assertEqual(info.orientation, 1)
+            self.assertEqual(info.orientation, 0)
 
     def test_exr(self):
         exrs = glob.glob(os.path.join(imagedir, "*.exr"))

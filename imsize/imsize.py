@@ -50,7 +50,7 @@ class ImageInfo:
       bytedepth (int): Bytes per sample: 1, 2 or 4
       maxval (int): Maximum representable sample value, e.g., 255
       nbytes (int): Size of the image in bytes, uncompressed
-      orientation (int): Image orientation in EXIF format: 1 to 8
+      orientation (int): Image orientation in EXIF format: 1 to 8, or 0 (unknown)
       rot90_ccw_steps (int): Number of rotations to bring the image upright: 0 to 3
       uncertain (bool): True if width/height/bitdepth are uncertain
     """
@@ -252,7 +252,7 @@ def _read_exif(filespec):
     info.height = int(exif.get(f"Exif.{maximg}.ImageLength"))
     info.nchan = int(exif.get(f"Exif.{maximg}.SamplesPerPixel"))
     info.bitdepth = exif.get(f"Exif.{maximg}.BitsPerSample")
-    info.orientation = int(exif.get(f"Exif.{maximg}.Orientation") or 1)
+    info.orientation = int(exif.get(f"Exif.{maximg}.Orientation") or 0)
     exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
     if info.orientation in exif_to_rot90:
         info.rot90_ccw_steps = exif_to_rot90[info.orientation]
@@ -359,7 +359,7 @@ def _complete(info):
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
     info.nbytes = info.width * info.height * info.nchan * info.bytedepth
     info.uncertain = False if info.uncertain is None else info.uncertain
-    info.orientation = info.orientation or 1  # None => 1
+    info.orientation = info.orientation or 0  # None => 0
     info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0
     info.header_size = info.header_size or 0  # None => 0
     return info
