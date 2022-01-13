@@ -6,8 +6,7 @@ python:
   - 3.8
 install:
   - pip install -r requirements.txt
+  - pip install prospector
   - pip install httpie
-  - pip install flake8
-  - pip install pylint
 script:
   - make lint test
