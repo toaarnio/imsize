@@ -77,7 +77,7 @@ class ImageInfo:
         return reprstr
 
     def __str__(self):
-        infostr = pprint.pformat(self.__dict__)
+        infostr = pprint.pformat(self.__dict__, sort_dicts=False)
         return infostr
 
 
