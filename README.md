@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/toaarnio/imsize.svg?branch=master)](https://travis-ci.com/github/toaarnio/imsize)
 
-Lightning-fast extraction of image dimensions & bit depth. Tested on Python 3.7+ and Ubuntu 20.04.
+Lightning-fast extraction of image dimensions & bit depth. Tested on Python 3.8 and Ubuntu 20.04.
 
 Supports PGM / PPM / PNM / PFM / PNG / BMP / JPG / TIFF / INSP / EXR / DNG / CR2 / NEF / RAW.
 
