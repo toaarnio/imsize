@@ -38,7 +38,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|jpeg|insp|tiff|exr|dng|cr2|nef|raw
+      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|dng|cr2|nef|raw
       filesize (int): Size of the file on disk in bytes
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
@@ -101,6 +101,7 @@ def read(filespec):
                 "pgm": _read_pnm,
                 "ppm": _read_pnm,
                 "pfm": _read_pfm,
+                "bmp": _read_bmp,
                 "jpeg": _read_jpeg,
                 "jpg": _read_jpeg,
                 "insp": _read_insp,
@@ -178,6 +179,31 @@ def _read_pfm(filespec):
     info.bytedepth = 4
     info = _complete(info)
     return info
+
+
+def _read_bmp(filespec):
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "bmp"
+    info.isfloat = False
+    info.cfa_raw = False
+    with open(filespec, "rb") as f:
+        bmp_header = f.read(14)
+        if bmp_header[:2] == b"BM":
+            dib_header = struct.unpack("<LLLHH", f.read(4 + 4 + 4 + 2 + 2))
+            info.width = dib_header[1]
+            info.height = dib_header[2]
+            bpp = dib_header[4]
+            info.nchan = {1: 1,        # 1 bpp => 1 channel
+                          2: 3,        # 2 bpp palettized => 3 channels
+                          4: 3,        # 4 bpp palettized => 3 channels
+                          8: 3,        # 8 bpp palettized => 3 channels
+                          16: 4,       # 16 bpp RGBA => 4 channels
+                          24: 3,       # 24 bpp RGB => 3 channels
+                          32: 4}[bpp]  # 32 bpp RGBA => 4 channels
+            info.maxval = 255
+        info = _complete(info)
+        return info
 
 
 def _read_exr(filespec):

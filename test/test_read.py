@@ -28,6 +28,24 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.nbytes, 600 * 450 * 3)
             self.assertEqual(info.orientation, 0)
 
+    def test_bmp(self):
+        bmps = glob.glob(os.path.join(imagedir, "*.bmp"))
+        self.assertTrue(len(bmps) > 0)
+        for i, bmp in enumerate(sorted(bmps)):
+            info = imsize.read(bmp)
+            self.assertEqual(info.filetype, "bmp")
+            self.assertEqual(info.nchan, 3)
+            self.assertTrue(info.width, 640)
+            self.assertTrue(info.height, 426)
+            self.assertEqual(info.bitdepth, 8)
+            self.assertEqual(info.bytedepth, 1)
+            self.assertEqual(info.maxval, 255)
+            self.assertEqual(info.isfloat, False)
+            self.assertEqual(info.uncertain, False)
+            self.assertEqual(info.cfa_raw, False)
+            self.assertEqual(info.nbytes, 640 * 426 * 3)
+            self.assertEqual(info.orientation, 0)
+
     def test_dng(self):
         dngs = glob.glob(os.path.join(imagedir, "*.DNG"))
         self.assertTrue(len(dngs) > 0)
