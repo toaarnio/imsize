@@ -8,4 +8,4 @@ install:
   - pip install prospector
   - pip install httpie
 script:
-  - make lint test
+  - make test

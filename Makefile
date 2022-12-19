@@ -11,6 +11,7 @@ endif
 
 test: download
 	python3 setup.py test
+	make lint
 
 install:
 	pip3 uninstall --yes imsize || true
