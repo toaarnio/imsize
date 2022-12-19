@@ -22,7 +22,7 @@ except ImportError:
 
 FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.bmp",
              "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif",
-             "*.exr", "*.dng", "*.cr2", "*.nef", "*.raw"]
+             "*.exr", "*.dng", "*.cr2", "*.nef", "*.raw", "*.npy"]
 
 
 def main():

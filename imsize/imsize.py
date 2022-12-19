@@ -7,6 +7,7 @@ Extracts image dimensions, bit depth, and other basic metadata.
 import os              # built-in library
 import math            # built-in library
 import struct          # built-in library
+import ast             # built-in library
 import pprint          # built-in library
 import piexif          # pip install piexif
 import pyexiv2         # pip install pyexiv2
@@ -38,7 +39,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|dng|cr2|nef|raw
+      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|dng|cr2|nef|raw|npy
       filesize (int): Size of the file on disk in bytes
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
@@ -111,7 +112,8 @@ def read(filespec):
                 "dng": _read_dng,
                 "cr2": _read_cr2,
                 "nef": _read_nef,
-                "raw": _read_raw}
+                "raw": _read_raw,
+                "npy": _read_npy}
     if filetype in handlers:
         handler = handlers[filetype]
         info = handler(filespec)
@@ -375,6 +377,30 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
         info = _complete(info)
     else:
         info = None
+    return info
+
+
+def _read_npy(filespec):
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "npy"
+    info.cfa_raw = False
+    with open(filespec, "rb") as npyfile:
+        magic = npyfile.read(6)
+        assert magic == b"\x93NUMPY"
+        _ = npyfile.read(2)  # version number; ignore
+        header_size, = struct.unpack("<h", npyfile.read(2))
+        header = npyfile.read(header_size)
+        meta = ast.literal_eval(header.decode("utf-8"))
+        dtype = np.dtype(meta["descr"])
+        shape = meta["shape"]
+        info.height, info.width = shape[:2]
+        info.nchan = 1 if len(shape) < 3 else shape[2]
+        info.isfloat = np.issubdtype(dtype, np.floating)
+        info.bytedepth = dtype.itemsize
+        info.bitdepth = info.bytedepth * 8
+        info.maxval = 1.0 if info.isfloat else 2 ** info.bitdepth - 1
+        info = _complete(info)
     return info
 
 

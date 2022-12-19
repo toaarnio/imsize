@@ -78,6 +78,20 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.bitdepth, 16)
             self.assertEqual(info.bytedepth, 2)
 
+    def test_npy(self):
+        npys = glob.glob(os.path.join(imagedir, "*.npy"))
+        self.assertTrue(len(npys) > 0)
+        for i, npy in enumerate(sorted(npys)):
+            info = imsize.read(npy)
+            self.assertEqual(info.filetype, "npy")
+            self.assertEqual(info.isfloat, "float" in npy)
+            self.assertEqual(info.width, 20)
+            self.assertEqual(info.height, 10)
+            self.assertEqual(info.nchan, 5)
+            self.assertEqual(info.bitdepth, 16)
+            self.assertEqual(info.bytedepth, 2)
+            self.assertEqual(info.nbytes, 20 * 10 * 5 * 2)
+
     def test_orientations(self):
         jpegs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.jpg")))
         tiffs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.tif")))
