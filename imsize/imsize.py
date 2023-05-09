@@ -381,10 +381,6 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
 
 
 def _read_npy(filespec):
-    info = ImageInfo()
-    info.filespec = filespec
-    info.filetype = "npy"
-    info.cfa_raw = False
     with open(filespec, "rb") as npyfile:
         magic = npyfile.read(6)
         assert magic == b"\x93NUMPY"
@@ -394,14 +390,19 @@ def _read_npy(filespec):
         meta = ast.literal_eval(header.decode("utf-8"))
         dtype = np.dtype(meta["descr"])
         shape = meta["shape"]
-        info.height, info.width = shape[:2]
-        info.nchan = 1 if len(shape) < 3 else shape[2]
-        info.isfloat = np.issubdtype(dtype, np.floating)
-        info.bytedepth = dtype.itemsize
-        info.bitdepth = info.bytedepth * 8
-        info.maxval = 1.0 if info.isfloat else 2 ** info.bitdepth - 1
-        info = _complete(info)
-    return info
+        if len(shape) in [2, 3]:  # grayscale or color
+            info = ImageInfo()
+            info.filespec = filespec
+            info.filetype = "npy"
+            info.cfa_raw = False
+            info.height, info.width = shape[:2]
+            info.nchan = 1 if len(shape) < 3 else shape[2]
+            info.isfloat = np.issubdtype(dtype, np.floating)
+            info.bytedepth = dtype.itemsize
+            info.bitdepth = info.bytedepth * 8
+            info.maxval = 1.0 if info.isfloat else 2 ** info.bitdepth - 1
+            info = _complete(info)
+            return info
 
 
 def _complete(info):
