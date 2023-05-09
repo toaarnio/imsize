@@ -2,7 +2,7 @@ deps:
 	pip3 install -r requirements.txt
 
 lint:
-	prospector imsize/imsize.py imsize/*hdr.py imsize/consoleapp.py
+	ruff check --show-source imsize/[^a]*.py
 
 download:
 ifeq (,$(wildcard ./test/images/*.DNG))

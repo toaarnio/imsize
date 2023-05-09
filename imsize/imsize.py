@@ -1,5 +1,3 @@
-#!/usr/bin/python3 -B
-
 """
 Extracts image dimensions, bit depth, and other basic metadata.
 """
