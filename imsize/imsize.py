@@ -30,12 +30,6 @@ except ImportError:
     import pfmhdr
     import exrhdr
 
-# Fetch version number from pyproject.toml
-
-import importlib.metadata  # built-in library
-
-__version__ = importlib.metadata.version(__package__ or __name__)
-
 
 ######################################################################################
 #

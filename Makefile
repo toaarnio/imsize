@@ -1,5 +1,5 @@
 lint:
-	ruff check --show-source src/[^a]*.py
+	ruff check --show-source imsize/[^a]*.py
 
 download:
 ifeq (,$(wildcard ./test/images/*.DNG))
@@ -16,7 +16,7 @@ install:
 	pip3 uninstall --yes imsize || true
 	pyproject-build || true
 	pip3 install --user dist/*.whl || true
-	rm -rf build src/imsize.egg-info || true
+	rm -rf build imsize.egg-info || true
 	@python3 -c 'import imsize; print(f"Installed imsize version {imsize.__version__}.")'
 
 release:
