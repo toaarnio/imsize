@@ -3,6 +3,7 @@ target-version = "py38"
 line-length = 150
 
 select = ["ALL"]
+
 ignore = [
 
        # ignore complete rule packages [common]
@@ -36,18 +37,6 @@ ignore = [
 
        # ignore individual errors & warnings [this project]
 
-       ]
+       "INP001",  # implicit-namespace-package
 
-
-[pylint]
-
-max-args = 8  # default: 5
-max-statements = 60  # default: 50
-
-
-[per-file-ignores]
-
-"__init__.py" = [
-       "E402",  # pycodestyle: module-import-not-at-top-of-file
-       "F403",  # pyflakes: import-star
        ]

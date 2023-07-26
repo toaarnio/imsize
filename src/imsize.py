@@ -1,5 +1,12 @@
 """
 Extracts image dimensions, bit depth, and other basic metadata.
+
+Example:
+  info = imsize.read("myfile.jpg")
+  factor = info.nbytes / info.filesize
+  print(f"{info.filespec}: compression factor = {factor.1f}")
+
+https://github.com/toaarnio/imsize
 """
 
 import os              # built-in library
@@ -22,6 +29,12 @@ except ImportError:
     import pnmhdr
     import pfmhdr
     import exrhdr
+
+# Fetch version number from pyproject.toml
+
+import importlib.metadata  # built-in library
+
+__version__ = importlib.metadata.version(__package__ or __name__)
 
 
 ######################################################################################

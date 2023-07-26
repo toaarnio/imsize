@@ -1,8 +1,5 @@
-deps:
-	pip3 install -r requirements.txt
-
 lint:
-	ruff check --show-source imsize/[^a]*.py
+	ruff check --show-source src/[^a]*.py
 
 download:
 ifeq (,$(wildcard ./test/images/*.DNG))
@@ -10,19 +7,21 @@ ifeq (,$(wildcard ./test/images/*.DNG))
 endif
 
 test: download
-	python3 setup.py test
+	pytest -v
 	make lint
 
 install:
+	pip3 install --user build
+	rm -rf build dist || true
 	pip3 uninstall --yes imsize || true
-	rm -rf build dist imsize.egg-info || true
-	python3 setup.py sdist bdist_wheel
-	pip3 install --user dist/*.whl
+	pyproject-build || true
+	pip3 install --user dist/*.whl || true
+	rm -rf build src/imsize.egg-info || true
 	@python3 -c 'import imsize; print(f"Installed imsize version {imsize.__version__}.")'
 
 release:
-	pip3 install --user setuptools wheel twine
+	pip3 install --user twine
 	make install
 	twine upload dist/*
 
-.PHONY: deps lint download test install release
+.PHONY: lint download test install release

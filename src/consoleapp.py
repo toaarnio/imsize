@@ -51,6 +51,8 @@ def main():
         print("  supported file types:")
         print("   ", '\n    '.join(FILETYPES))
         print()
+        print(f"imsize version {imsize.__version__}")
+        print()
         sys.exit(-1)
     else:
         if verbose:
