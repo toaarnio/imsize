@@ -44,7 +44,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|dng|cr2|nef|raw|npy
+      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|hdr|dng|cr2|nef|raw|npy|...
       filesize (int): Size of the file on disk in bytes
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
@@ -91,8 +91,10 @@ def read(filespec):
     """
     Parses a lowest common denominator set of metadata from the given
     image, i.e., the dimensions and bit depth. Does not read the entire
-    file but only what's necessary. Returns an ImageInfo with all fields
-    filled in, or None in case of failure.
+    file but only what's necessary. If the file type is recognized and
+    parsing succeeds, returns an ImageInfo with all fields filled in.
+    Otherwise, an exception is raised or only the basic file attributes
+    (name, type, size) are filled in.
 
     Example:
       info = imsize.read("myfile.jpg")
@@ -114,6 +116,7 @@ def read(filespec):
                 "tiff": _read_tiff,
                 "tif": _read_tiff,
                 "exr": _read_exr,
+                "hdr": _read_hdr,
                 "dng": _read_dng,
                 "cr2": _read_cr2,
                 "nef": _read_nef,
@@ -123,7 +126,15 @@ def read(filespec):
         handler = handlers[filetype]
         info = handler(filespec)
         return info
-    return None
+    else:
+        # unrecognized file extension
+        info = ImageInfo()
+        info.filespec = filespec
+        info.filetype = filetype
+        info.filesize = os.path.getsize(filespec)
+        info.nbytes = info.filesize
+        info.uncertain = True
+        return info
 
 
 ######################################################################################
@@ -154,6 +165,7 @@ def _read_png(filespec):
                       6: 4}[ihdr[3]]  # truecolor_alpha => 4 channels
         info = _complete(info)
         return info
+    raise RuntimeError(f"File {filespec} is not a valid PNG file.")
 
 
 def _read_pnm(filespec):
@@ -188,6 +200,30 @@ def _read_pfm(filespec):
     return info
 
 
+def _read_hdr(filespec):
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "hdr"
+    info.filesize = os.path.getsize(filespec)
+    info.isfloat = True
+    info.cfa_raw = False
+    info.nchan = 3
+    info.bitdepth = 32
+    info.bytedepth = 4
+    with open(filespec, "rb") as f:
+        if f.readline() != b"#?RADIANCE\n":
+            raise RuntimeError(f"File {filespec} is not a valid Radiance HDR file.")
+        for line in f:
+            if line == b"\n":
+                dims = f.readline().decode("utf-8")  # '-Y 480 +X 720'
+                dims = dims.split(" ")
+                info.height = int(dims[1])
+                info.width = int(dims[3])
+                info = _complete(info)
+                return info
+    raise RuntimeError(f"File {filespec} is not a valid Radiance HDR file.")
+
+
 def _read_bmp(filespec):
     info = ImageInfo()
     info.filespec = filespec
@@ -211,6 +247,7 @@ def _read_bmp(filespec):
             info.maxval = 255
         info = _complete(info)
         return info
+    raise RuntimeError(f"File {filespec} is not a valid BMP file.")
 
 
 def _read_exr(filespec):
@@ -249,7 +286,8 @@ def _read_jpeg(filespec):
             info.width = sof[2]
             info.nchan = sof[3]
             info = _complete(info)
-    return info
+            return info
+    raise RuntimeError(f"File {filespec} is not a valid JPEG file.")
 
 
 def _read_insp(filespec):
@@ -380,8 +418,6 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
         minbits = max(minbits, 10)  # 10, 12, 14, 16
         info.bitdepth = int(minbits)  # can underestimate bpp if image is very dark
         info = _complete(info)
-    else:
-        info = None
     return info
 
 
@@ -408,6 +444,7 @@ def _read_npy(filespec):
             info.maxval = 1.0 if info.isfloat else 2 ** info.bitdepth - 1
             info = _complete(info)
             return info
+    raise RuntimeError(f"File {filespec} is not a valid NPY file.")
 
 
 def _complete(info):

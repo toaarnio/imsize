@@ -21,7 +21,7 @@ except ImportError:
 
 
 FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.bmp",
-             "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif",
+             "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.hdr",
              "*.exr", "*.dng", "*.cr2", "*.nef", "*.raw", "*.npy"]
 
 

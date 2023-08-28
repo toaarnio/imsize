@@ -92,6 +92,20 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.bytedepth, 2)
             self.assertEqual(info.nbytes, 20 * 10 * 5 * 2)
 
+    def test_hdr(self):
+        hdrs = glob.glob(os.path.join(imagedir, "*.hdr"))
+        self.assertTrue(len(hdrs) > 0)
+        for i, hdr in enumerate(sorted(hdrs)):
+            info = imsize.read(hdr)
+            self.assertEqual(info.filetype, "hdr")
+            self.assertEqual(info.isfloat, True)
+            self.assertEqual(info.width, 720)
+            self.assertEqual(info.height, 480)
+            self.assertEqual(info.nchan, 3)
+            self.assertEqual(info.bitdepth, 32)
+            self.assertEqual(info.bytedepth, 4)
+            self.assertEqual(info.nbytes, info.width * info.height * info.nchan * info.bytedepth)
+
     def test_orientations(self):
         jpegs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.jpg")))
         tiffs = sorted(glob.glob(os.path.join(imagedir, "orientations", "*.tif")))
