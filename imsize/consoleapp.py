@@ -91,7 +91,7 @@ def scan_sizes(filespecs, verbose, show_all):
         except RuntimeError as e:
             print(f"{basename}: Skipping: {e}")
             continue
-        if info is None:
+        if info.width is None:
             print(f"{basename}: Unable to guess dimensions. Maybe not an image? Skipping.")
         else:
             num_processed += 1
