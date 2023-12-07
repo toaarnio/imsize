@@ -88,8 +88,8 @@ def scan_sizes(filespecs, verbose, show_all):
         basename = os.path.basename(filespec)
         try:
             info = imsize.read(filespec)
-        except RuntimeError as e:
-            print(f"{basename}: Skipping: {e}")
+        except Exception as e:
+            print(f"{basename}: {type(e).__name__}: {e}")
             continue
         if info.width is None:
             print(f"{basename}: Unable to guess dimensions. Maybe not an image? Skipping.")

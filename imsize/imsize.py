@@ -430,7 +430,7 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
 def _read_npy(filespec):
     with open(filespec, "rb") as npyfile:
         magic = npyfile.read(6)
-        assert magic == b"\x93NUMPY"
+        assert magic == b"\x93NUMPY", "Not a valid numpy file"
         _ = npyfile.read(2)  # version number; ignore
         header_size, = struct.unpack("<h", npyfile.read(2))
         header = npyfile.read(header_size)
