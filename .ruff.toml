@@ -37,4 +37,6 @@ ignore = [
 
        # ignore individual errors & warnings [this project]
 
+       "BLE001",  # flake8-blind-except: blind-except
+
        ]
