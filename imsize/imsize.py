@@ -46,6 +46,9 @@ class ImageInfo:
       filespec (str): The filespec given to read(), copied verbatim
       filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|hdr|dng|cr2|nef|raw|npy|...
       filesize (int): Size of the file on disk in bytes
+      multi_picture (bool): True if there is more than one image in the file
+      num_subimages (int): Number of additional images contained in the file
+      subimage_sizes (list): Size of each additional image
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
@@ -64,6 +67,9 @@ class ImageInfo:
         self.filespec = None
         self.filetype = None
         self.filesize = None
+        self.multi_picture = None
+        self.num_subimages = None
+        self.subimage_sizes = None
         self.header_size = None
         self.isfloat = None
         self.cfa_raw = None
@@ -457,4 +463,8 @@ def _complete(info):
     info.orientation = info.orientation or 0  # None => 0
     info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0
     info.header_size = info.header_size or 0  # None => 0
+    if not info.multi_picture:
+        info.multi_picture = False
+        info.num_subimages = 0
+        info.subimage_sizes = []
     return info
