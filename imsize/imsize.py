@@ -286,6 +286,30 @@ def _read_jpeg(filespec):
             while not 0xc0 <= segtype <= 0xcf or segtype in [0xc4, 0xc8, 0xcc]:
                 f.seek(size - 2, 1)  # skip to next segment
                 _0xff, segtype, size = struct.unpack(">BBH", f.read(4))
+                if segtype == 0xe2:  # APP2
+                    prev_pos = f.tell()
+                    # Detect Multi-Picture Format (MPF) as per CIPA DC-007-2009
+                    if f.read(4) == b"MPF\x00":
+                        endianness = f.read(4)
+                        bo = ">" if endianness == b"MM\x00*" else "<"
+                        offset, _count = struct.unpack(f"{bo}IH", f.read(6))
+                        version_tag, version = struct.unpack(f"{bo}Hxxxxxx4s", f.read(12))
+                        nimages_tag, nimages = struct.unpack(f"{bo}HxxxxxxI", f.read(12))
+                        mpentry_tag, = struct.unpack(f"{bo}Hxxxxxxxxxx", f.read(12))
+                        assert offset == 8, f"Expected offset 8, got {offset}"
+                        assert version_tag == 45056, f"Expected tag id 45056 (MPFVersion), got {version_tag}"
+                        assert version == b"0100", f"Expected version '0100', got {version}"
+                        assert nimages_tag == 45057, f"Expected tag id 45057 (NumberOfImages), got {nimages_tag}"
+                        assert nimages >= 2, f"Expected at least 2 sub-images, got {nimages}"
+                        assert mpentry_tag == 45058, f"Expected tag id 45058 (MPEntry), got {mpentry_tag}"
+                        info.multi_picture = True
+                        info.num_subimages = nimages - 1
+                        info.subimage_sizes = []
+                        attrs, imsize, subimage_offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
+                        for _ in range(info.num_subimages):
+                            attrs, imsize, subimage_offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
+                            info.subimage_sizes.append(subimage_offset)
+                    f.seek(prev_pos)
             sof = struct.unpack(">BHHB", f.read(6))
             info.bitdepth = sof[0]
             info.height = sof[1]
