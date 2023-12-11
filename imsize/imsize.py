@@ -47,8 +47,9 @@ class ImageInfo:
       filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|hdr|dng|cr2|nef|raw|npy|...
       filesize (int): Size of the file on disk in bytes
       multi_picture (bool): True if there is more than one image in the file
-      num_subimages (int): Number of additional images contained in the file
-      subimage_sizes (list): Size of each additional image
+      num_images (int): Number of images contained in the file
+      image_sizes (list): Size of each image in the file, in bytes
+      image_offsets (list): Offset of each image in the file, in bytes
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
@@ -68,8 +69,9 @@ class ImageInfo:
         self.filetype = None
         self.filesize = None
         self.multi_picture = None
-        self.num_subimages = None
-        self.subimage_sizes = None
+        self.num_images = None
+        self.image_sizes = None
+        self.image_offsets = None
         self.header_size = None
         self.isfloat = None
         self.cfa_raw = None
@@ -108,7 +110,7 @@ def read(filespec):
       print(f"{info.filespec}: compression factor = {factor.1f}")
     """
     filename = os.path.basename(filespec)             # "path/image.ext" => "image.ext"
-    extension = os.path.splitext(filename)[-1]        # "image.ext" => ("image", ".ext")
+    extension = os.path.splitext(filename)[-1]        # "image.ext" => ".ext"
     filetype = extension.lower()[1:]                  # ".EXT" => "ext"
     handlers = {"png": _read_png,
                 "pnm": _read_pnm,
@@ -292,23 +294,26 @@ def _read_jpeg(filespec):
                     if f.read(4) == b"MPF\x00":
                         endianness = f.read(4)
                         bo = ">" if endianness == b"MM\x00*" else "<"
-                        offset, _count = struct.unpack(f"{bo}IH", f.read(6))
+                        offset, count = struct.unpack(f"{bo}IH", f.read(6))
                         version_tag, version = struct.unpack(f"{bo}Hxxxxxx4s", f.read(12))
                         nimages_tag, nimages = struct.unpack(f"{bo}HxxxxxxI", f.read(12))
                         mpentry_tag, = struct.unpack(f"{bo}Hxxxxxxxxxx", f.read(12))
+                        next_ifd, = struct.unpack(f"{bo}I", f.read(4))
                         assert offset == 8, f"Expected offset 8, got {offset}"
+                        assert count == 3, f"Expected count 3, got {count}"
                         assert version_tag == 45056, f"Expected tag id 45056 (MPFVersion), got {version_tag}"
                         assert version == b"0100", f"Expected version '0100', got {version}"
                         assert nimages_tag == 45057, f"Expected tag id 45057 (NumberOfImages), got {nimages_tag}"
-                        assert nimages >= 2, f"Expected at least 2 sub-images, got {nimages}"
+                        assert nimages == 2, f"Expected exactly 2 images, got {nimages}"
                         assert mpentry_tag == 45058, f"Expected tag id 45058 (MPEntry), got {mpentry_tag}"
                         info.multi_picture = True
-                        info.num_subimages = nimages - 1
-                        info.subimage_sizes = []
-                        attrs, imsize, subimage_offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
-                        for _ in range(info.num_subimages):
-                            attrs, imsize, subimage_offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
-                            info.subimage_sizes.append(subimage_offset)
+                        info.num_images = nimages
+                        info.image_sizes = []
+                        info.image_offsets = []
+                        for _ in range(info.num_images):
+                            _attrs, imsize, offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
+                            info.image_offsets.append(offset + prev_pos + 4)
+                            info.image_sizes.append(imsize)
                     f.seek(prev_pos)
             sof = struct.unpack(">BHHB", f.read(6))
             info.bitdepth = sof[0]
@@ -489,6 +494,7 @@ def _complete(info):
     info.header_size = info.header_size or 0  # None => 0
     if not info.multi_picture:
         info.multi_picture = False
-        info.num_subimages = 0
-        info.subimage_sizes = []
+        info.num_images = 1
+        info.image_sizes = [info.filesize]
+        info.image_offsets = [0]
     return info
