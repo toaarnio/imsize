@@ -46,22 +46,22 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.nbytes, 640 * 426 * 3)
             self.assertEqual(info.orientation, 0)
 
-    def test_dng(self):
-        dngs = glob.glob(os.path.join(imagedir, "*.DNG"))
+    def test_dng_ricoh(self):
+        dngs = glob.glob(os.path.join(imagedir, "R001*.DNG"))
         self.assertTrue(len(dngs) > 0)
         for i, dng in enumerate(sorted(dngs)):
             info = imsize.read(dng)
             self.assertEqual(info.filetype, "dng")
             self.assertEqual(info.nchan, 1)
-            self.assertTrue(info.width, 7296)
-            self.assertTrue(info.height, 3648)
+            self.assertEqual(info.width, 7296)
+            self.assertEqual(info.height, 3648)
             self.assertEqual(info.bitdepth, 12)
             self.assertEqual(info.bytedepth, 2)
             self.assertEqual(info.maxval, 4095)
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, True)
-            self.assertEqual(info.nbytes, 7296 * 3648 * 2)
+            self.assertEqual(info.nbytes, info.width * info.height * 2)
             self.assertEqual(info.orientation, 0)
 
     def test_exr(self):
