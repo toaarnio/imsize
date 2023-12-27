@@ -61,8 +61,26 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, True)
-            self.assertEqual(info.nbytes, info.width * info.height * 2)
+            self.assertEqual(info.nbytes, info.width * info.height * info.bytedepth)
             self.assertEqual(info.orientation, 0)
+
+    def test_cr2(self):
+        cr2s = glob.glob(os.path.join(imagedir, "RAW_CANON_1000D.CR2"))
+        self.assertTrue(len(cr2s) > 0)
+        for i, cr2 in enumerate(sorted(cr2s)):
+            info = imsize.read(cr2)
+            self.assertEqual(info.filetype, "cr2")
+            self.assertEqual(info.nchan, 1)
+            self.assertEqual(info.width, 3888)
+            self.assertEqual(info.height, 2592)
+            self.assertEqual(info.bitdepth, 14)
+            self.assertEqual(info.bytedepth, 2)
+            self.assertEqual(info.maxval, 16383)
+            self.assertEqual(info.isfloat, False)
+            self.assertEqual(info.uncertain, True)
+            self.assertEqual(info.cfa_raw, True)
+            self.assertEqual(info.nbytes, info.width * info.height * info.bytedepth)
+            self.assertEqual(info.orientation, 8)
 
     def test_exr(self):
         exrs = glob.glob(os.path.join(imagedir, "*.exr"))
