@@ -383,14 +383,20 @@ def _read_exif_pyexiv2(filespec):
         return info
 
 
+def _multikey(meta, *keys):
+    value = meta.get(keys[0])
+    if value is None and len(keys) > 1:
+        return _multikey(meta, *keys[1:])
+    return value
+
+
 def _read_exif_exiftool(filespec):
     with exiftool.ExifToolHelper() as et:
         meta = et.get_metadata(filespec)[0]
         info = ImageInfo()
-        multikey = lambda key1, key2: meta.get(key1, meta.get(key2))
         info.cfa_raw = meta["EXIF:PhotometricInterpretation"] in [32803, 34892]
-        info.width = multikey("EXIF:ExifImageWidth", "XMP:ImageWidth")
-        info.height = multikey("EXIF:ExifImageHeight", "XMP:ImageHeight")
+        info.width = _multikey(meta, "EXIF:ExifImageWidth", "XMP:ImageWidth", "EXIF:ImageWidth")
+        info.height = _multikey(meta, "EXIF:ExifImageHeight", "XMP:ImageHeight", "EXIF:ImageHeight")
         info.nchan = meta["EXIF:SamplesPerPixel"]
         info.bitdepth = meta["EXIF:BitsPerSample"]
         info.orientation = meta["EXIF:Orientation"]
