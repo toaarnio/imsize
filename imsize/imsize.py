@@ -374,8 +374,9 @@ def _read_exif_pyexiv2(filespec):
         info.bitdepth = exif.get(f"Exif.{maximg}.BitsPerSample", "0")
         info.orientation = int(exif.get(f"Exif.{maximg}.Orientation", 0))
         info.rot90_ccw_steps = _rot90_steps(info.orientation)
-        bitdepths = tuple(int(el) for el in info.bitdepth.split(" "))  # string => tuple of ints
-        info.bitdepth = bitdepths[0]
+        if isinstance(info.bitdepth, str):
+            bitdepths = tuple(int(el) for el in info.bitdepth.split(" "))  # string => tuple of ints
+            info.bitdepth = bitdepths[0]
     except RuntimeError:
         return None
     else:
@@ -394,6 +395,9 @@ def _read_exif_exiftool(filespec):
         info.bitdepth = meta["EXIF:BitsPerSample"]
         info.orientation = meta["EXIF:Orientation"]
         info.rot90_ccw_steps = _rot90_steps(info.orientation)
+        if isinstance(info.bitdepth, str):
+            bitdepths = tuple(int(el) for el in info.bitdepth.split(" "))  # string => tuple of ints
+            info.bitdepth = bitdepths[0]
         return info
 
 
