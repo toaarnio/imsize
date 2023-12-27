@@ -14,8 +14,8 @@ import math            # built-in library
 import struct          # built-in library
 import ast             # built-in library
 import pprint          # built-in library
-import piexif          # pip install piexif
 import pyexiv2         # pip install pyexiv2
+import exiftool        # pip install pyexiftool
 import rawpy           # pip install rawpy
 import numpy as np     # pip install numpy
 
@@ -276,7 +276,7 @@ def _read_exr(filespec):
 
 
 def _read_jpeg(filespec):
-    info = _read_exif_orientation(filespec)
+    info = _read_exif_pyexiv2(filespec)
     info.filespec = filespec
     info.filetype = "jpeg"
     info.isfloat = False
@@ -337,64 +337,80 @@ def _rot90_steps(exif_orientation):
     return rot90_ccw_steps
 
 
-def _read_exif_orientation(filespec):
-    info = ImageInfo()
-    exif = piexif.load(filespec)
-    exif = exif.pop("0th")
-    info.orientation = exif.get(piexif.ImageIFD.Orientation)
-    info.rot90_ccw_steps = _rot90_steps(info.orientation)
-    return info
+def _read_exif_pyexiv2(filespec):
+    try:
+        with pyexiv2.Image(filespec) as img:
+            encodings = ["utf-8", "ISO-8859-1"]
+            for encoding in encodings:
+                try:
+                    exif = img.read_exif(encoding)
+                except UnicodeDecodeError:
+                    continue
+        subimages = ["Image", "SubImage1", "SubImage2", "SubImage3"]
+        widths = [exif.get(f"Exif.{sub}.ImageWidth") for sub in subimages]
+        widths = [int(w or 0) for w in widths]  # None => 0
+        maximg = subimages[np.argmax(widths)]  # use the largest sub-image
+        info = ImageInfo()
+        info.cfa_raw = exif.get(f"Exif.{maximg}.PhotometricInterpretation") in ['32803', '34892']
+        info.width = int(exif.get(f"Exif.{maximg}.ImageWidth", 0))
+        info.height = int(exif.get(f"Exif.{maximg}.ImageLength", 0))
+        info.nchan = int(exif.get(f"Exif.{maximg}.SamplesPerPixel", 0))
+        info.bitdepth = exif.get(f"Exif.{maximg}.BitsPerSample", "0")
+        info.orientation = int(exif.get(f"Exif.{maximg}.Orientation", 0))
+        info.rot90_ccw_steps = _rot90_steps(info.orientation)
+        bitdepths = tuple(int(el) for el in info.bitdepth.split(" "))  # string => tuple of ints
+        info.bitdepth = bitdepths[0]
+    except RuntimeError:
+        return None
+    else:
+        return info
 
 
-def _read_exif(filespec):
-    info = ImageInfo()
+def _read_exif_exiftool(filespec):
+    with exiftool.ExifToolHelper() as et:
+        meta = et.get_metadata(filespec)[0]
+        info = ImageInfo()
+        multikey = lambda key1, key2: meta.get(key1, meta.get(key2))
+        info.cfa_raw = meta["EXIF:PhotometricInterpretation"] in [32803, 34892]
+        info.width = multikey("EXIF:ExifImageWidth", "XMP:ImageWidth")
+        info.height = multikey("EXIF:ExifImageHeight", "XMP:ImageHeight")
+        info.nchan = meta["EXIF:SamplesPerPixel"]
+        info.bitdepth = meta["EXIF:BitsPerSample"]
+        info.orientation = meta["EXIF:Orientation"]
+        info.rot90_ccw_steps = _rot90_steps(info.orientation)
+        return info
+
+
+def _read_exif_tiff(filespec):
+    info = _read_exif_pyexiv2(filespec)
+    if info is None:
+        info = _read_exif_exiftool(filespec)
     info.filespec = filespec
     info.filetype = "exif"
     info.isfloat = False
-    img = pyexiv2.Image(filespec)
-    exif = img.read_exif()
-    subimages = ["Image", "SubImage1", "SubImage2", "SubImage3"]
-    widths = [exif.get(f"Exif.{sub}.ImageWidth") for sub in subimages]
-    widths = [int(w or 0) for w in widths]  # None => 0
-    maximg = subimages[np.argmax(widths)]  # use the largest sub-image
-    info.cfa_raw = exif.get(f"Exif.{maximg}.PhotometricInterpretation") in ['32803', '34892']
-    info.width = int(exif.get(f"Exif.{maximg}.ImageWidth"))
-    info.height = int(exif.get(f"Exif.{maximg}.ImageLength"))
-    info.nchan = int(exif.get(f"Exif.{maximg}.SamplesPerPixel"))
-    info.bitdepth = exif.get(f"Exif.{maximg}.BitsPerSample")
-    info.orientation = int(exif.get(f"Exif.{maximg}.Orientation") or 0)
-    exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
-    if info.orientation in exif_to_rot90:
-        info.rot90_ccw_steps = exif_to_rot90[info.orientation]
-    bitdepths = tuple(int(el) for el in info.bitdepth.split(" "))  # string => tuple of ints
-    info.bitdepth = bitdepths[0]
     info = _complete(info)
     return info
 
 
 def _read_tiff(filespec):
-    info = _read_exif(filespec)
+    info = _read_exif_tiff(filespec)
     info.filetype = "tiff"
     return info
 
 
 def _read_dng(filespec):
-    info = _read_exif(filespec)
+    info = _read_exif_tiff(filespec)
     info.filetype = "dng"
     return info
 
 
 def _read_cr2(filespec):
-    exif = piexif.load(filespec)
-    exif = exif.pop("0th")
-    info = ImageInfo()
+    info = _read_exif_exiftool(filespec)
     info.filespec = filespec
     info.filetype = "cr2"
     info.uncertain = True
     info.isfloat = False
     info.cfa_raw = True
-    info.width = exif.get(piexif.ImageIFD.ImageWidth)
-    info.height = exif.get(piexif.ImageIFD.ImageLength)
     info.nchan = 1
     info.bytedepth = 2
     info.bitdepth = 14  # 14-bit since Canon 450D (2008)
