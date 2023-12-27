@@ -407,26 +407,25 @@ def _read_exif_exiftool(filespec):
         return info
 
 
-def _read_exif_tiff(filespec):
+def _read_tiff(filespec):
     info = _read_exif_pyexiv2(filespec)
     if info is None:
         info = _read_exif_exiftool(filespec)
     info.filespec = filespec
-    info.filetype = "exif"
+    info.filetype = "tiff"
     info.isfloat = False
     info = _complete(info)
     return info
 
 
-def _read_tiff(filespec):
-    info = _read_exif_tiff(filespec)
-    info.filetype = "tiff"
-    return info
-
-
 def _read_dng(filespec):
-    info = _read_exif_tiff(filespec)
+    info = _read_exif_pyexiv2(filespec)
+    if info is None:
+        info = _read_exif_exiftool(filespec)
+    info.filespec = filespec
     info.filetype = "dng"
+    info.isfloat = False
+    info = _complete(info)
     return info
 
 
