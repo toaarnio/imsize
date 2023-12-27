@@ -10,10 +10,12 @@ https://github.com/toaarnio/imsize
 """
 
 import os              # built-in library
+import sys             # built-in library
 import math            # built-in library
 import struct          # built-in library
 import ast             # built-in library
 import pprint          # built-in library
+import contextlib      # built-in library
 import pyexiv2         # pip install pyexiv2
 import exiftool        # pip install pyexiftool
 import rawpy           # pip install rawpy
@@ -150,6 +152,20 @@ def read(filespec):
 #  I N T E R N A L   F U N C T I O N S
 #
 ######################################################################################
+
+
+@contextlib.contextmanager
+def silence_stdout():
+    stdout_fd = sys.stdout.fileno()
+    orig_fd = os.dup(stdout_fd)
+    null_fd = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(null_fd, stdout_fd)
+    try:
+        yield
+    finally:
+        os.dup2(orig_fd, stdout_fd)
+        os.close(orig_fd)
+        os.close(null_fd)
 
 
 def _read_png(filespec):
@@ -339,7 +355,7 @@ def _rot90_steps(exif_orientation):
 
 def _read_exif_pyexiv2(filespec):
     try:
-        with pyexiv2.Image(filespec) as img:
+        with silence_stdout(), pyexiv2.Image(filespec) as img:
             encodings = ["utf-8", "ISO-8859-1"]
             for encoding in encodings:
                 try:
