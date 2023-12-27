@@ -331,14 +331,18 @@ def _read_insp(filespec):
     return info
 
 
+def _rot90_steps(exif_orientation):
+    exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
+    rot90_ccw_steps = exif_to_rot90.get(exif_orientation, None)
+    return rot90_ccw_steps
+
+
 def _read_exif_orientation(filespec):
     info = ImageInfo()
     exif = piexif.load(filespec)
     exif = exif.pop("0th")
     info.orientation = exif.get(piexif.ImageIFD.Orientation)
-    exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
-    if info.orientation in exif_to_rot90:
-        info.rot90_ccw_steps = exif_to_rot90[info.orientation]
+    info.rot90_ccw_steps = _rot90_steps(info.orientation)
     return info
 
 
