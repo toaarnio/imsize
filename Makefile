@@ -5,6 +5,9 @@ download:
 ifeq (,$(wildcard ./test/images/*.DNG))
 	cd ./test/images && http --download https://support.theta360.com/intl/download/sample/R0010001.DNG
 endif
+ifeq (,$(wildcard ./test/images/*.CR2))
+	cd ./test/images && http --download http://www.rawsamples.ch/raws/canon/RAW_CANON_1000D.CR2
+endif
 
 test: download
 	pytest -v
