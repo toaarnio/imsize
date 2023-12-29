@@ -355,7 +355,7 @@ def _rot90_steps(exif_orientation):
 
 def _read_exif_pyexiv2(filespec):
     try:
-        with silence_stdout(), pyexiv2.Image(filespec) as img:
+        with silence_stdout(), pyexiv2.Image(str(filespec)) as img:
             encodings = ["utf-8", "ISO-8859-1"]
             for encoding in encodings:
                 try:
