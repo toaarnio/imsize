@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import glob
 import unittest
@@ -14,7 +15,7 @@ class ReadTest(unittest.TestCase):
         pngs = glob.glob(os.path.join(imagedir, "*.png"))
         self.assertTrue(len(pngs) > 0)
         for i, png in enumerate(sorted(pngs)):
-            info = imsize.read(png)
+            info = imsize.read(Path(png))
             self.assertEqual(info.filetype, "png")
             self.assertEqual(info.nchan, 3)
             self.assertTrue(info.width in [600, 450])
@@ -32,7 +33,7 @@ class ReadTest(unittest.TestCase):
         bmps = glob.glob(os.path.join(imagedir, "*.bmp"))
         self.assertTrue(len(bmps) > 0)
         for i, bmp in enumerate(sorted(bmps)):
-            info = imsize.read(bmp)
+            info = imsize.read(Path(bmp))
             self.assertEqual(info.filetype, "bmp")
             self.assertEqual(info.nchan, 3)
             self.assertTrue(info.width, 640)
@@ -50,7 +51,7 @@ class ReadTest(unittest.TestCase):
         dngs = glob.glob(os.path.join(imagedir, "R001*.DNG"))
         self.assertTrue(len(dngs) > 0)
         for i, dng in enumerate(sorted(dngs)):
-            info = imsize.read(dng)
+            info = imsize.read(Path(dng))
             self.assertEqual(info.filetype, "dng")
             self.assertEqual(info.nchan, 1)
             self.assertEqual(info.width, 7296)
@@ -68,7 +69,7 @@ class ReadTest(unittest.TestCase):
         cr2s = glob.glob(os.path.join(imagedir, "RAW_CANON_1000D.CR2"))
         self.assertTrue(len(cr2s) > 0)
         for i, cr2 in enumerate(sorted(cr2s)):
-            info = imsize.read(cr2)
+            info = imsize.read(Path(cr2))
             self.assertEqual(info.filetype, "cr2")
             self.assertEqual(info.nchan, 1)
             self.assertEqual(info.width, 3888)
@@ -86,7 +87,7 @@ class ReadTest(unittest.TestCase):
         exrs = glob.glob(os.path.join(imagedir, "*.exr"))
         self.assertTrue(len(exrs) > 0)
         for i, exr in enumerate(sorted(exrs)):
-            info = imsize.read(exr)
+            info = imsize.read(Path(exr))
             self.assertEqual(info.filetype, "exr")
             self.assertEqual(info.isfloat, True)
             self.assertEqual(info.cfa_raw, False)
@@ -100,7 +101,7 @@ class ReadTest(unittest.TestCase):
         npys = glob.glob(os.path.join(imagedir, "*.npy"))
         self.assertTrue(len(npys) > 0)
         for i, npy in enumerate(sorted(npys)):
-            info = imsize.read(npy)
+            info = imsize.read(Path(npy))
             self.assertEqual(info.filetype, "npy")
             self.assertEqual(info.isfloat, "float" in npy)
             self.assertEqual(info.width, 20)
@@ -114,7 +115,7 @@ class ReadTest(unittest.TestCase):
         hdrs = glob.glob(os.path.join(imagedir, "*.hdr"))
         self.assertTrue(len(hdrs) > 0)
         for i, hdr in enumerate(sorted(hdrs)):
-            info = imsize.read(hdr)
+            info = imsize.read(Path(hdr))
             self.assertEqual(info.filetype, "hdr")
             self.assertEqual(info.isfloat, True)
             self.assertEqual(info.width, 720)
@@ -131,7 +132,7 @@ class ReadTest(unittest.TestCase):
         self.assertTrue(len(tiffs) == 16)
         for fmt, fileset in zip(["jpeg", "tiff"], [jpegs, tiffs]):
             for i, filespec in enumerate(fileset):
-                info = imsize.read(filespec)
+                info = imsize.read(Path(filespec))
                 self.assertEqual(info.filetype, fmt)
                 self.assertEqual(info.nchan, 3)
                 self.assertTrue(info.width in [600, 450])
