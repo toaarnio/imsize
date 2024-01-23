@@ -1,6 +1,6 @@
 [project]
 name = "imsize"
-version = "1.6.1"
+version = "1.6.2"
 description="Lightning-fast extraction of basic image metadata"
 authors = [{name = "Tomi Aarnio", email = "tomi.p.aarnio@gmail.com"}]
 readme = "README.md"

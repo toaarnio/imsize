@@ -293,51 +293,52 @@ def _read_exr(filespec):
 
 def _read_jpeg(filespec):
     info = _read_exif_pyexiv2(filespec)
-    info.filespec = filespec
-    info.filetype = "jpeg"
-    info.isfloat = False
-    info.cfa_raw = False
-    with open(filespec, "rb") as f:
-        if f.read(2) == b"\xff\xd8":
-            size = 2
-            segtype = 0
-            while not 0xc0 <= segtype <= 0xcf or segtype in [0xc4, 0xc8, 0xcc]:
-                f.seek(size - 2, 1)  # skip to next segment
-                _0xff, segtype, size = struct.unpack(">BBH", f.read(4))
-                if segtype == 0xe2:  # APP2
-                    prev_pos = f.tell()
-                    # Detect Multi-Picture Format (MPF) as per CIPA DC-007-2009
-                    if f.read(4) == b"MPF\x00":
-                        endianness = f.read(4)
-                        bo = ">" if endianness == b"MM\x00*" else "<"
-                        offset, count = struct.unpack(f"{bo}IH", f.read(6))
-                        version_tag, version = struct.unpack(f"{bo}Hxxxxxx4s", f.read(12))
-                        nimages_tag, nimages = struct.unpack(f"{bo}HxxxxxxI", f.read(12))
-                        mpentry_tag, = struct.unpack(f"{bo}Hxxxxxxxxxx", f.read(12))
-                        next_ifd, = struct.unpack(f"{bo}I", f.read(4))
-                        assert offset == 8, f"Expected offset 8, got {offset}"
-                        assert count == 3, f"Expected count 3, got {count}"
-                        assert version_tag == 45056, f"Expected tag id 45056 (MPFVersion), got {version_tag}"
-                        assert version == b"0100", f"Expected version '0100', got {version}"
-                        assert nimages_tag == 45057, f"Expected tag id 45057 (NumberOfImages), got {nimages_tag}"
-                        assert nimages == 2, f"Expected exactly 2 images, got {nimages}"
-                        assert mpentry_tag == 45058, f"Expected tag id 45058 (MPEntry), got {mpentry_tag}"
-                        info.multi_picture = True
-                        info.num_images = nimages
-                        info.image_sizes = []
-                        info.image_offsets = []
-                        for _ in range(info.num_images):
-                            _attrs, imsize, offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
-                            info.image_offsets.append(offset + prev_pos + 4)
-                            info.image_sizes.append(imsize)
-                    f.seek(prev_pos)
-            sof = struct.unpack(">BHHB", f.read(6))
-            info.bitdepth = sof[0]
-            info.height = sof[1]
-            info.width = sof[2]
-            info.nchan = sof[3]
-            info = _complete(info)
-            return info
+    if info is not None:
+        info.filespec = filespec
+        info.filetype = "jpeg"
+        info.isfloat = False
+        info.cfa_raw = False
+        with open(filespec, "rb") as f:
+            if f.read(2) == b"\xff\xd8":
+                size = 2
+                segtype = 0
+                while not 0xc0 <= segtype <= 0xcf or segtype in [0xc4, 0xc8, 0xcc]:
+                    f.seek(size - 2, 1)  # skip to next segment
+                    _0xff, segtype, size = struct.unpack(">BBH", f.read(4))
+                    if segtype == 0xe2:  # APP2
+                        prev_pos = f.tell()
+                        # Detect Multi-Picture Format (MPF) as per CIPA DC-007-2009
+                        if f.read(4) == b"MPF\x00":
+                            endianness = f.read(4)
+                            bo = ">" if endianness == b"MM\x00*" else "<"
+                            offset, count = struct.unpack(f"{bo}IH", f.read(6))
+                            version_tag, version = struct.unpack(f"{bo}Hxxxxxx4s", f.read(12))
+                            nimages_tag, nimages = struct.unpack(f"{bo}HxxxxxxI", f.read(12))
+                            mpentry_tag, = struct.unpack(f"{bo}Hxxxxxxxxxx", f.read(12))
+                            next_ifd, = struct.unpack(f"{bo}I", f.read(4))
+                            assert offset == 8, f"Expected offset 8, got {offset}"
+                            assert count == 3, f"Expected count 3, got {count}"
+                            assert version_tag == 45056, f"Expected tag id 45056 (MPFVersion), got {version_tag}"
+                            assert version == b"0100", f"Expected version '0100', got {version}"
+                            assert nimages_tag == 45057, f"Expected tag id 45057 (NumberOfImages), got {nimages_tag}"
+                            assert nimages == 2, f"Expected exactly 2 images, got {nimages}"
+                            assert mpentry_tag == 45058, f"Expected tag id 45058 (MPEntry), got {mpentry_tag}"
+                            info.multi_picture = True
+                            info.num_images = nimages
+                            info.image_sizes = []
+                            info.image_offsets = []
+                            for _ in range(info.num_images):
+                                _attrs, imsize, offset, _entry1, _entry2 = struct.unpack(f"{bo}IIIHH", f.read(16))
+                                info.image_offsets.append(offset + prev_pos + 4)
+                                info.image_sizes.append(imsize)
+                        f.seek(prev_pos)
+                sof = struct.unpack(">BHHB", f.read(6))
+                info.bitdepth = sof[0]
+                info.height = sof[1]
+                info.width = sof[2]
+                info.nchan = sof[3]
+                info = _complete(info)
+                return info
     raise RuntimeError(f"File {filespec} is not a valid JPEG file.")
 
 
