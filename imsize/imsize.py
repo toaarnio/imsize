@@ -316,13 +316,14 @@ def _read_jpeg(filespec):
                             nimages_tag, nimages = struct.unpack(f"{bo}HxxxxxxI", f.read(12))
                             mpentry_tag, = struct.unpack(f"{bo}Hxxxxxxxxxx", f.read(12))
                             next_ifd, = struct.unpack(f"{bo}I", f.read(4))
-                            assert offset == 8, f"Expected offset 8, got {offset}"
-                            assert count == 3, f"Expected count 3, got {count}"
-                            assert version_tag == 45056, f"Expected tag id 45056 (MPFVersion), got {version_tag}"
-                            assert version == b"0100", f"Expected version '0100', got {version}"
-                            assert nimages_tag == 45057, f"Expected tag id 45057 (NumberOfImages), got {nimages_tag}"
-                            assert nimages == 2, f"Expected exactly 2 images, got {nimages}"
-                            assert mpentry_tag == 45058, f"Expected tag id 45058 (MPEntry), got {mpentry_tag}"
+                            prefix = f"Error parsing MPF JPEG '{filespec}':"
+                            assert offset == 8, f"{prefix}: Expected offset 8, got {offset}"
+                            assert count == 3, f"{prefix}: Expected count 3, got {count}"
+                            assert version_tag == 45056, f"{prefix}: Expected tag id 45056 (MPFVersion), got {version_tag}"
+                            assert version == b"0100", f"{prefix}: Expected version '0100', got {version}"
+                            assert nimages_tag == 45057, f"{prefix}: Expected tag id 45057 (NumberOfImages), got {nimages_tag}"
+                            assert nimages in [2, 3], f"{prefix}: Expected 2 or 3 sub-images, got {nimages}"
+                            assert mpentry_tag == 45058, f"{prefix}: Expected tag id 45058 (MPEntry), got {mpentry_tag}"
                             info.multi_picture = True
                             info.num_images = nimages
                             info.image_sizes = []
