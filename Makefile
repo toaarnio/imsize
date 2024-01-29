@@ -17,6 +17,7 @@ install:
 	pip3 install --user build
 	rm -rf build dist || true
 	pip3 uninstall --yes imsize || true
+	ping -c 3 www.google.com  # pyproject-build requires internet access
 	pyproject-build || true
 	pip3 install --user dist/*.whl || true
 	rm -rf build imsize.egg-info || true
