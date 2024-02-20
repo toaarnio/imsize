@@ -40,6 +40,14 @@ except ImportError:
 ######################################################################################
 
 
+FILETYPES = [".png", ".pnm", ".pgm",
+             ".ppm", ".pfm", ".bmp",
+             ".jpeg", ".jpg", ".insp",
+             ".tiff", ".tif", ".exr",
+             ".hdr", ".dng", ".cr2",
+             ".nef", ".raw", ".npy"]
+
+
 class ImageInfo:
     """
     A container for image metadata, filled in and returned by read().
@@ -132,6 +140,14 @@ def read(filespec):
                 "nef": _read_nef,
                 "raw": _read_raw,
                 "npy": _read_npy}
+
+    # Check that we have a parser for each known filetype, and
+    # conversely, that all filetypes are listed for which we have
+    # a parser
+
+    filetypes = {ext[1:] for ext in FILETYPES}  # .ext => ext
+    assert set(handlers) == filetypes, set(handlers) ^ filetypes
+
     if filetype in handlers:
         handler = handlers[filetype]
         info = handler(filespec)

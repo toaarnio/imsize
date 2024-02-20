@@ -11,7 +11,7 @@ Example:
 https://github.com/toaarnio/imsize
 """
 
-from .imsize import read, ImageInfo
+from .imsize import read, ImageInfo, FILETYPES
 from .version import __version__
 
-__all__ = ["read", "ImageInfo", "__version__"]
+__all__ = ["read", "ImageInfo", "FILETYPES", "__version__"]

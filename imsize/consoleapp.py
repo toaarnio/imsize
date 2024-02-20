@@ -20,11 +20,6 @@ except ImportError:
     import argv
 
 
-FILETYPES = ["*.png", "*.pnm", "*.pgm", "*.ppm", "*.pfm", "*.bmp",
-             "*.jpeg", "*.jpg", "*.insp", "*.tiff", "*.tif", "*.hdr",
-             "*.exr", "*.dng", "*.cr2", "*.nef", "*.raw", "*.npy"]
-
-
 def main():
     """
     Entry point for the 'imsize' command-line application.
@@ -49,7 +44,7 @@ def main():
         print("    imsize ~/Pictures")
         print()
         print("  supported file types:")
-        print("   ", '\n    '.join(FILETYPES))
+        print("   ", '\n    '.join(imsize.FILETYPES))
         print()
         print(f"imsize version {imsize.__version__}")
         print()
@@ -69,7 +64,7 @@ def find_files(paths):
     allfiles = []
     for path in paths:
         if os.path.isdir(path):
-            for filetype in FILETYPES:
+            for filetype in imsize.FILETYPES:
                 allfiles += glob.glob(os.path.join(path, filetype))
                 allfiles += glob.glob(os.path.join(path, filetype.upper()))
         elif os.path.isfile(path):
