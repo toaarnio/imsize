@@ -257,9 +257,9 @@ def _read_bmp(filespec):
     with open(filespec, "rb") as f:
         bmp_header = f.read(14)
         if bmp_header[:2] == b"BM":
-            dib_header = struct.unpack("<LLLHH", f.read(4 + 4 + 4 + 2 + 2))
+            dib_header = struct.unpack("<iiiHH", f.read(4 + 4 + 4 + 2 + 2))
             info.width = dib_header[1]
-            info.height = dib_header[2]
+            info.height = abs(dib_header[2])  # negative => top to bottom
             bpp = dib_header[4]
             info.nchan = {1: 1,        # 1 bpp => 1 channel
                           2: 3,        # 2 bpp palettized => 3 channels
