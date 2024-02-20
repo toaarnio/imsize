@@ -195,16 +195,16 @@ def _read_png(filespec):
         signature = bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
         if header.startswith(signature) and header[12:16] == b"IHDR":
             ihdr = struct.unpack(">LLBB", header[16:26])
-        info.width = ihdr[0]
-        info.height = ihdr[1]
-        info.bitdepth = ihdr[2]
-        info.nchan = {0: 1,           # greyscale => 1 channel
-                      2: 3,           # truecolor => 3 channels
-                      3: 3,           # indexed => 3 channels
-                      4: 2,           # greyscale_alpha => 2 channels
-                      6: 4}[ihdr[3]]  # truecolor_alpha => 4 channels
-        info = _complete(info)
-        return info
+            info.width = ihdr[0]
+            info.height = ihdr[1]
+            info.bitdepth = ihdr[2]
+            info.nchan = {0: 1,           # greyscale => 1 channel
+                          2: 3,           # truecolor => 3 channels
+                          3: 3,           # indexed => 3 channels
+                          4: 2,           # greyscale_alpha => 2 channels
+                          6: 4}[ihdr[3]]  # truecolor_alpha => 4 channels
+            info = _complete(info)
+            return info
     raise RuntimeError(f"File {filespec} is not a valid PNG file.")
 
 
@@ -287,8 +287,8 @@ def _read_bmp(filespec):
                           24: 3,       # 24 bpp RGB => 3 channels
                           32: 4}[bpp]  # 32 bpp RGBA => 4 channels
             info.maxval = 255
-        info = _complete(info)
-        return info
+            info = _complete(info)
+            return info
     raise RuntimeError(f"File {filespec} is not a valid BMP file.")
 
 
