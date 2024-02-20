@@ -257,10 +257,12 @@ def _read_bmp(filespec):
     with open(filespec, "rb") as f:
         bmp_header = f.read(14)
         if bmp_header[:2] == b"BM":
-            dib_header = struct.unpack("<iiiHH", f.read(4 + 4 + 4 + 2 + 2))
-            info.width = dib_header[1]
-            info.height = abs(dib_header[2])  # negative => top to bottom
-            bpp = dib_header[4]
+            dib_header_size = np.fromfile(f, dtype=np.uint32, count=1)
+            fmt = "<HHHH" if dib_header_size == 12 else "<iiHH"
+            dib_header = struct.unpack(fmt, f.read(struct.calcsize(fmt)))
+            info.width = dib_header[0]
+            info.height = abs(dib_header[1])  # negative => top to bottom
+            bpp = dib_header[3]
             info.nchan = {1: 1,        # 1 bpp => 1 channel
                           2: 3,        # 2 bpp palettized => 3 channels
                           4: 3,        # 4 bpp palettized => 3 channels
