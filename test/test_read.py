@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import glob
 import unittest
+import tempfile
 import imsize
 
 
@@ -145,6 +146,12 @@ class ReadTest(unittest.TestCase):
                 self.assertEqual(info.cfa_raw, False)
                 self.assertEqual(info.nbytes, 600 * 450 * 3)
                 self.assertEqual(info.orientation, (i % 8) + 1)
+
+    def test_empty_files(self):
+        for ext in imsize.FILETYPES:
+            with tempfile.NamedTemporaryFile(suffix=ext) as fp:
+                with self.assertRaises(imsize.ImageFileError):
+                    info = imsize.read(fp.name)
 
 
 if __name__ == "__main__":
