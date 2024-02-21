@@ -217,7 +217,7 @@ def _read_png(filespec):
                           6: 4}[ihdr[3]]  # truecolor_alpha => 4 channels
             info = _complete(info)
             return info
-    raise RuntimeError(f"File {filespec} is not a valid PNG file.")
+    raise ImageFileError(f"File {filespec} is not a valid PNG file.")
 
 
 def _read_pnm(filespec):
@@ -264,7 +264,7 @@ def _read_hdr(filespec):
     info.bytedepth = 4
     with open(filespec, "rb") as f:
         if f.readline() != b"#?RADIANCE\n":
-            raise RuntimeError(f"File {filespec} is not a valid Radiance HDR file.")
+            raise ImageFileError(f"File {filespec} is not a valid Radiance HDR file.")
         for line in f:
             if line == b"\n":
                 dims = f.readline().decode("utf-8")  # '-Y 480 +X 720'
@@ -273,7 +273,7 @@ def _read_hdr(filespec):
                 info.width = int(dims[3])
                 info = _complete(info)
                 return info
-    raise RuntimeError(f"File {filespec} is not a valid Radiance HDR file.")
+    raise ImageFileError(f"File {filespec} is not a valid Radiance HDR file.")
 
 
 def _read_bmp(filespec):
@@ -301,7 +301,7 @@ def _read_bmp(filespec):
             info.maxval = 255
             info = _complete(info)
             return info
-    raise RuntimeError(f"File {filespec} is not a valid BMP file.")
+    raise ImageFileError(f"File {filespec} is not a valid BMP file.")
 
 
 def _read_exr(filespec):
@@ -370,7 +370,7 @@ def _read_jpeg(filespec):
                 info.nchan = sof[3]
                 info = _complete(info)
                 return info
-    raise RuntimeError(f"File {filespec} is not a valid JPEG file.")
+    raise ImageFileError(f"File {filespec} is not a valid JPEG file.")
 
 
 def _read_insp(filespec):
@@ -557,7 +557,7 @@ def _read_npy(filespec):
             info.maxval = 1.0 if info.isfloat else 2 ** info.bitdepth - 1
             info = _complete(info)
             return info
-    raise RuntimeError(f"File {filespec} is not a valid NPY file.")
+    raise ImageFileError(f"File {filespec} is not a valid NPY image file.")
 
 
 def _complete(info):
