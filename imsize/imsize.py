@@ -150,8 +150,14 @@ def read(filespec):
 
     if filetype in handlers:
         handler = handlers[filetype]
-        info = handler(filespec)
-        return info
+        try:
+            info = handler(filespec)
+        except ImageFileError:
+            raise
+        except Exception as e:
+            raise ImageFileError(f"File {filespec} is not a recognized {filetype.upper()} file.") from e
+        else:
+            return info
     else:
         # unrecognized file extension
         info = ImageInfo()
@@ -161,6 +167,12 @@ def read(filespec):
         info.nbytes = info.filesize
         info.uncertain = True
         return info
+
+
+class ImageFileError(Exception):
+    """
+    A custom exception raised in all known error conditions.
+    """
 
 
 ######################################################################################
