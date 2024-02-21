@@ -494,6 +494,7 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     info.bytedepth = 2  # all sensors are at least 10-bit these days
     info.header_size = 0  # assume no header
     info.filesize = os.path.getsize(filespec)
+    assert info.filesize > 256 * 256, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
     for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
         numpixels = info.filesize / info.bytedepth
         info.height = math.sqrt(numpixels * aspect)
