@@ -1,5 +1,5 @@
 lint:
-	ruff check --show-source imsize/[^a]*.py
+	ruff check imsize/[^a]*.py
 
 download:
 ifeq (,$(wildcard ./test/images/*.DNG))
@@ -14,17 +14,19 @@ test: download
 	make lint
 
 install:
-	pip3 install --user build
-	rm -rf build dist || true
-	pip3 uninstall --yes imsize || true
-	ping -c 3 www.google.com  # pyproject-build requires internet access
-	pyproject-build || true
-	pip3 install --user dist/*.whl || true
-	rm -rf build imsize.egg-info || true
+	hatch build  # pip install hatch
+	uv pip uninstall --quiet imsize
+	uv pip install dist/*.whl || true
+	unzip -v dist/*.whl
 	@python3 -c 'import imsize; print(f"Installed imsize version {imsize.__version__}.")'
 
+qinstall:  # quick & quiet install; wheel only
+	@hatch build -t wheel
+	@uv pip uninstall --quiet imsize
+	@uv pip install --quiet dist/*.whl || true
+
 release:
-	pip3 install --user twine
+	uv pip install twine
 	make install
 	twine upload dist/*
 

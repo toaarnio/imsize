@@ -1,11 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "imsize"
-version = "1.7.0"
 description="Lightning-fast extraction of basic image metadata"
-authors = [{name = "Tomi Aarnio", email = "tomi.p.aarnio@gmail.com"}]
+authors = [
+  {name = "Tomi Aarnio", email = "tomi.p.aarnio@gmail.com"}
+]
 readme = "README.md"
-requires-python = ">= 3.8"
-license = {file = "LICENSE"}
+requires-python = ">= 3.10"
+dynamic = ["version"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
@@ -18,8 +23,25 @@ dependencies = [
   "rawpy >= 0.19.0"
 ]
 
+[tool.hatch.envs.default]
+installer = "uv"
+
 [project.urls]
 Homepage = "http://github.com/toaarnio/imsize"
 
 [project.scripts]
 imsize = "imsize.consoleapp:main"
+
+[tool.hatch.version]
+path = "imsize/version.py"
+
+[tool.hatch.build]
+include = ["imsize"]
+exclude = ["*test*"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "--tb=short"

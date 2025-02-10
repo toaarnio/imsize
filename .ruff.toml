@@ -2,9 +2,9 @@ target-version = "py38"
 
 line-length = 150
 
-select = ["ALL"]
+lint.select = ["ALL"]
 
-ignore = [
+lint.ignore = [
 
        # ignore complete rule packages [common]
 

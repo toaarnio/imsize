@@ -17,4 +17,4 @@ from .imsize import read
 from .imsize import ImageFileError
 from .version import __version__
 
-__all__ = ["read", "ImageInfo", "FILETYPES", "ImageFileError", "__version__"]
+__all__ = ["FILETYPES", "ImageFileError", "ImageInfo", "__version__", "read"]

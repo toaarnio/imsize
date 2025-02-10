@@ -381,7 +381,7 @@ def _read_insp(filespec):
 
 def _rot90_steps(exif_orientation):
     exif_to_rot90 = {1: 0, 2: 0, 3: 2, 4: 0, 5: 1, 6: 3, 7: 3, 8: 1}
-    rot90_ccw_steps = exif_to_rot90.get(exif_orientation, None)
+    rot90_ccw_steps = exif_to_rot90.get(exif_orientation)
     return rot90_ccw_steps
 
 
