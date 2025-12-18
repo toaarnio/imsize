@@ -8,6 +8,7 @@ Example:
 
 https://github.com/toaarnio/imsize
 """
+from __future__ import annotations
 
 import os              # built-in library
 import sys             # built-in library
@@ -16,6 +17,7 @@ import struct          # built-in library
 import ast             # built-in library
 import pprint          # built-in library
 import contextlib      # built-in library
+import sympy           # pip install sympy
 import pyexiv2         # pip install pyexiv2
 import exiftool        # pip install pyexiftool
 import rawpy           # pip install rawpy
@@ -167,6 +169,42 @@ def read(filespec: str) -> ImageInfo:
         info.nbytes = info.filesize
         info.uncertain = True
         return info
+
+
+def guess_dims(num_pixels: int, min_dim: int = 256) -> list[int, int] | None:
+    """
+    Try to guess a width and height for the given number of pixels, with
+    the following assumptions and rules:
+
+    1. No surplus data, such as headers or footers
+    2. width % 4 == 0
+    3. height % 2 == 0
+    4. width >= height >= min_dim
+    5. 1.0 >= height/width >= 0.4
+    6. Aspect ratio probability order: 3/4, 2/3, 9/16, 1, <max>
+
+    :param num_pixels: number of pixels (not bytes)
+    :param min_dim: required minimum height and width
+    :returns: most probable width & height, or None
+    """
+    candidates = sympy.ntheory.divisors(num_pixels)  # 24 => [1, 2, 3, 4, 6, 8, 12, 24]
+    candidates = [n for n in candidates if min_dim <= n <= num_pixels // min_dim]
+    if candidates:
+        pairs = np.asarray(list(zip(candidates, candidates[::-1])))
+        aspects = pairs[:, 1] / pairs[:, 0]  # height / width
+        valid = (aspects <= 1.0) * (aspects >= 0.4)
+        valid *= (pairs[:, 0] % 4 == 0) * (pairs[:, 1] % 2 == 0)
+        pairs = pairs[valid]
+        aspects = aspects[valid]
+        for atol in [1e-4, 0.02]:  # try exact matches first, then approximate
+            for cand in [3/4, 2/3, 9/16, 1]:
+                isclose = np.isclose(aspects, cand, atol=atol)
+                if np.any(isclose):
+                    idx = np.argmax(isclose)
+                    dims = pairs[idx].tolist()
+                    return dims
+        dims = pairs[0].tolist() if pairs.size >= 2 else None
+        return dims
 
 
 class ImageFileError(Exception):

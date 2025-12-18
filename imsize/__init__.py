@@ -14,7 +14,8 @@ https://github.com/toaarnio/imsize
 from .imsize import FILETYPES
 from .imsize import ImageInfo
 from .imsize import read
+from .imsize import guess_dims
 from .imsize import ImageFileError
 from .version import __version__
 
-__all__ = ["FILETYPES", "ImageFileError", "ImageInfo", "__version__", "read"]
+__all__ = ["FILETYPES", "ImageFileError", "ImageInfo", "__version__", "guess_dims", "read"]

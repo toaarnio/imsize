@@ -4,6 +4,7 @@ import glob
 import unittest
 import tempfile
 import imsize
+import numpy as np
 
 
 thisdir = os.path.dirname(__file__)
@@ -11,6 +12,13 @@ imagedir = os.path.join(thisdir, "images")
 
 
 class ReadTest(unittest.TestCase):
+
+    def test_guess_dims(self):
+        for dims in [[1024, 768], [1024, 766], [1920, 1080]]:
+            w, h = dims
+            width, height = imsize.guess_dims(np.prod(dims))
+            self.assertEqual([width, height], [w, h])
+        self.assertEqual(imsize.guess_dims(511, min_dim=1), None)
 
     def test_png(self):
         pngs = glob.glob(os.path.join(imagedir, "*.png"))
