@@ -105,7 +105,7 @@ class ImageInfo:
         return infostr
 
 
-def read(filespec):
+def read(filespec: str) -> ImageInfo:
     """
     Parses a lowest common denominator set of metadata from the given
     image, i.e., the dimensions and bit depth. Does not read the entire
@@ -345,7 +345,7 @@ def _read_jpeg(filespec):
                             version_tag, version = struct.unpack(f"{bo}Hxxxxxx4s", f.read(12))
                             nimages_tag, nimages = struct.unpack(f"{bo}HxxxxxxI", f.read(12))
                             mpentry_tag, = struct.unpack(f"{bo}Hxxxxxxxxxx", f.read(12))
-                            next_ifd, = struct.unpack(f"{bo}I", f.read(4))
+                            _next_ifd, = struct.unpack(f"{bo}I", f.read(4))
                             prefix = f"Error parsing MPF JPEG '{filespec}':"
                             assert offset == 8, f"{prefix}: Expected offset 8, got {offset}"
                             assert count == 3, f"{prefix}: Expected count 3, got {count}"
