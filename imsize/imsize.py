@@ -544,24 +544,28 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     info.bytedepth = 2  # all sensors are at least 10-bit these days
     info.header_size = 0  # assume no header
     info.filesize = os.path.getsize(filespec)
-    assert info.filesize > 256 * 256, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
-    for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
-        numpixels = info.filesize / info.bytedepth
-        info.height = math.sqrt(numpixels * aspect)
-        info.width = numpixels / info.height
-        wrem4 = info.width % 4
-        hrem4 = info.height % 4
-        if wrem4 == 0 and hrem4 == 0:
-            info.width = int(info.width)
-            info.height = int(info.height)
-            break
-        if wrem4 < 0.5 and hrem4 < 0.5:
-            info.width = int(info.width)
-            info.height = int(info.height)
-            info.header_size = info.filesize - info.width * info.height * info.bytedepth
-            break
-        info.width = None
-        info.height = None
+    assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
+    numpixels = info.filesize // info.bytedepth
+    dims = guess_dims(numpixels)
+    if dims is not None:  # make a guess without header/footer bytes
+        info.width, info.height = dims
+    else:  # make a guess with header/footer allowed
+        for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
+            info.height = math.sqrt(numpixels * aspect)
+            info.width = numpixels / info.height
+            wrem4 = info.width % 4
+            hrem4 = info.height % 4
+            if wrem4 == 0 and hrem4 == 0:
+                info.width = int(info.width)
+                info.height = int(info.height)
+                break
+            if wrem4 < 0.5 and hrem4 < 0.5:
+                info.width = int(info.width)
+                info.height = int(info.height)
+                info.header_size = info.filesize - info.width * info.height * info.bytedepth
+                break
+            info.width = None
+            info.height = None
     if info.width is not None:
         raw = np.fromfile(filespec, dtype='<u2', offset=info.header_size)  # assume x86 byte order
         minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
