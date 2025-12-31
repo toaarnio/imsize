@@ -7,10 +7,12 @@ of a file is read from disk (except for headerless Camera RAW and Nikon
 NEF).
 """
 
-import os              # built-in library
-import sys             # built-in library
-import glob            # built-in library
-import imsize          # pip install imsize
+import os                 # built-in library
+import sys                # built-in library
+import glob               # built-in library
+from pathlib import Path  # built-in library
+
+import imsize             # pip install imsize
 
 try:
     # package mode
@@ -79,6 +81,8 @@ def scan_sizes(filespecs, verbose, show_all):
     total_compressed = 0
     total_uncompressed = 0
     num_processed = 0
+    max_namelen = 0
+    infos = []
     for filespec in sorted(filespecs):
         basename = os.path.basename(filespec)
         try:
@@ -92,17 +96,27 @@ def scan_sizes(filespecs, verbose, show_all):
             num_processed += 1
             total_uncompressed += info.nbytes / 1024**2
             total_compressed += info.filesize / 1024**2
-            if verbose:
-                megs = info.nbytes / 1024**2
-                mpix = info.width * info.height / 1000000
-                est = " [estimated]" if info.uncertain else ""
-                if info.rot90_ccw_steps in [0, 2]:
-                    width, height = (info.width, info.height)
-                else:
-                    width, height = (info.height, info.width)
-                print(f"{basename}: {width} x {height} x {info.nchan} x {info.bitdepth} bits => {megs:.1f} MB{est}, {mpix:.1f} MP")
+            max_namelen = max(max_namelen, len(basename))
+            infos.append(info)
+
+    if verbose:
+        maxw = max_namelen + 1
+        for info in infos:
+            basename = Path(info.filespec).name
+            megs = info.nbytes / 1024**2
+            mpix = info.width * info.height / 1000000
+            est = " [est.]" if info.uncertain else ""
+            packed = " [packed]" if info.packed_raw else ""
+            if info.rot90_ccw_steps in [0, 2]:
+                width, height = (info.width, info.height)
+            else:
+                width, height = (info.height, info.width)
+            stats = f"{width:>5} x {height:>5} x {info.nchan} x {info.bitdepth:>2} bits{packed:>9} => "
+            stats += f"{mpix:5.1f} MP, {megs:5.1f} MB{est}"
+            print(f"{basename:{maxw}.{maxw}}: {stats}")
             if show_all:
                 print(info)
+
     print(f"Scanned {num_processed} images, total {total_compressed:.1f} MB compressed, {total_uncompressed:.1f} MB uncompressed")
 
 
