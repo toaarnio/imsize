@@ -70,7 +70,7 @@ class ImageInfo:
       height (int): Height of the image in pixels (orientation ignored)
       nchan (int): Number of color channels: 1, 2, 3 or 4
       bitdepth (int): Bits per sample: 1 to 32
-      bytedepth (int): Bytes per sample: 1, 2 or 4
+      bytedepth (float): Bytes per sample; may be fractional if packed_raw is True
       maxval (int): Maximum representable sample value, e.g., 255
       nbytes (int): Size of the image in bytes, uncompressed
       orientation (int): Image orientation in EXIF format: 1 to 8, or 0 (unknown)
@@ -171,6 +171,57 @@ def read(filespec: str) -> ImageInfo:
         info.nbytes = info.filesize
         info.uncertain = True
         return info
+
+
+def guess_packing(filespec: str) -> tuple[bool, int]:
+    """
+    Try to guess whether a raw file is unpacked (2 bytes per pixel),
+    12-bit packed (3 bytes per 2 pixels), or 10-bit packed (5 bytes
+    per 4 pixels). The determination is based on the first 150 kB of
+    the file contents.
+
+    Note the following assumptions and limitations:
+    1. Only 10-bit and 12-bit formats are recognized;
+    2. Dark 12-bit unpacked images may be categorized as 10-bit;
+    3. Headers and footers may adversely affect reliability;
+    4. Unpacked images are assumed to be little-endian (x86);
+    5. The analysis is based on the first 150 kB of the file;
+    6. Bit-packing order is left undetermined.
+
+    :param filespec: raw file to analyze
+    :returns is_packed: True if the raw data is bit-packed
+    :returns bpp: bits per pixel, can be either 10 or 12
+    """
+    def get_periodicity_score(p):
+        cols = data.reshape(-1, p)
+        col_stds = np.std(cols, axis=0)
+        score = np.std(col_stds) / (np.mean(col_stds) + 1e-6)
+        return score
+
+    data = np.fromfile(filespec, dtype=np.uint8, count=1024 * 150)
+    data = data[3000:]  # should be enough to skip any headers
+    scores = {p: get_periodicity_score(p) for p in [2, 3, 5]}
+    winner = max(scores, key=scores.get)
+    period_to_bpp = {2: 0, 3: 12, 5: 10}
+    bitdepth = period_to_bpp[winner]
+    bpp = bitdepth or guess_bpp(data.view(np.uint16))
+    is_packed = bool(bitdepth)
+    return is_packed, bpp
+
+
+def guess_bpp(raw: np.ndarray) -> int:
+    """
+    Try to guess the bit depth of the given unpacked raw data. The data
+    is assumed to have no header, footer, or any other non-pixel data.
+
+    :param raw: raw pixel data to analyze; dtype = np.uint16
+    :returns: bits per pixel, can be either 10 or 12
+    """
+    minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
+    minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
+    minbits = np.clip(minbits, 10, 12)  # 10 or 12
+    minbits = int(minbits)
+    return minbits
 
 
 def guess_dims(num_pixels: int, min_dim: int = 256) -> list[int, int] | None:
@@ -552,11 +603,12 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     info.isfloat = False
     info.cfa_raw = True
     info.nchan = 1
-    info.bytedepth = 2  # all sensors are at least 10-bit these days
     info.header_size = 0  # assume no header
     info.filesize = os.path.getsize(filespec)
     assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
-    numpixels = info.filesize // info.bytedepth
+    info.packed_raw, info.bitdepth = guess_packing(filespec)
+    info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
+    numpixels = int(info.filesize / info.bytedepth)
     dims = guess_dims(numpixels)
     if dims is not None:  # make a guess without header/footer bytes
         info.width, info.height = dims
@@ -577,13 +629,7 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
                 break
             info.width = None
             info.height = None
-    if info.width is not None:
-        raw = np.fromfile(filespec, dtype='<u2', offset=info.header_size)  # assume x86 byte order
-        minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
-        minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
-        minbits = max(minbits, 10)  # 10, 12, 14, 16
-        info.bitdepth = int(minbits)  # can underestimate bpp if image is very dark
-        info = _complete(info)
+    info = _complete(info)
     return info
 
 

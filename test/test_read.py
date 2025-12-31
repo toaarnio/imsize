@@ -7,8 +7,8 @@ import imsize
 import numpy as np
 
 
-thisdir = os.path.dirname(__file__)
-imagedir = os.path.join(thisdir, "images")
+thisdir = Path(__file__).parent
+imagedir = thisdir / "images"
 
 
 class ReadTest(unittest.TestCase):
@@ -19,6 +19,26 @@ class ReadTest(unittest.TestCase):
             width, height = imsize.guess_dims(np.prod(dims))
             self.assertEqual([width, height], [w, h])
         self.assertEqual(imsize.guess_dims(511, min_dim=1), None)
+
+    def test_guess_packing(self):
+        is_packed, bpp = imsize.guess_packing(imagedir / "packed-10bit-3648x2736.raw")
+        self.assertTrue(is_packed)
+        self.assertEqual(bpp, 10)
+
+    def test_raw(self):
+        info = imsize.read(imagedir / "packed-10bit-3648x2736.raw")
+        self.assertEqual(info.filetype, "raw")
+        self.assertEqual(info.nchan, 1)
+        self.assertEqual(info.width, 3648)
+        self.assertEqual(info.height, 2736)
+        self.assertEqual(info.bitdepth, 10)
+        self.assertEqual(info.bytedepth, 1.25)
+        self.assertEqual(info.maxval, 1023)
+        self.assertEqual(info.cfa_raw, True)
+        self.assertEqual(info.packed_raw, True)
+        self.assertEqual(info.isfloat, False)
+        self.assertEqual(info.uncertain, True)
+        self.assertEqual(info.nbytes, 3648 * 2736 * 10 // 8)
 
     def test_png(self):
         pngs = glob.glob(os.path.join(imagedir, "*.png"))
@@ -35,6 +55,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, False)
+            self.assertEqual(info.packed_raw, False)
             self.assertEqual(info.nbytes, 600 * 450 * 3)
             self.assertEqual(info.orientation, 0)
 
@@ -53,6 +74,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, False)
+            self.assertEqual(info.packed_raw, False)
             self.assertEqual(info.nbytes, 640 * 426 * 3)
             self.assertEqual(info.orientation, 0)
 
@@ -71,6 +93,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, False)
             self.assertEqual(info.cfa_raw, True)
+            self.assertEqual(info.packed_raw, False)
             self.assertEqual(info.nbytes, info.width * info.height * info.bytedepth)
             self.assertEqual(info.orientation, 0)
 
@@ -89,6 +112,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, True)
             self.assertEqual(info.cfa_raw, True)
+            self.assertEqual(info.packed_raw, False)
             self.assertEqual(info.nbytes, info.width * info.height * info.bytedepth)
             self.assertEqual(info.orientation, 8)
 
@@ -100,6 +124,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.filetype, "exr")
             self.assertEqual(info.isfloat, True)
             self.assertEqual(info.cfa_raw, False)
+            self.assertEqual(info.packed_raw, False)
             self.assertEqual(info.width, 800)
             self.assertEqual(info.height, 800)
             self.assertEqual(info.nchan, 1)
@@ -152,6 +177,7 @@ class ReadTest(unittest.TestCase):
                 self.assertEqual(info.isfloat, False)
                 self.assertEqual(info.uncertain, False)
                 self.assertEqual(info.cfa_raw, False)
+                self.assertEqual(info.packed_raw, False)
                 self.assertEqual(info.nbytes, 600 * 450 * 3)
                 self.assertEqual(info.orientation, (i % 8) + 1)
 
