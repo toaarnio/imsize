@@ -249,7 +249,7 @@ def guess_dims(num_pixels: int, min_dim: int = 256) -> list[int, int] | None:
         if np.any(valid):
             pairs = pairs[valid]
             aspects = aspects[valid]
-            for atol in [1e-4, 0.05]:  # try exact matches first, then approximate
+            for atol in [1e-4, 0.02]:  # try exact matches first, then approximate
                 for cand in [3/4, 3/2, 2/3, 9/16, 1]:
                     closest = np.argmin(np.abs(aspects - cand))
                     if np.isclose(aspects[closest], cand, atol=atol):

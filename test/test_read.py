@@ -14,7 +14,8 @@ imagedir = thisdir / "images"
 class ReadTest(unittest.TestCase):
 
     def test_guess_dims(self):
-        for dims in [[1024, 768], [1024, 766], [1920, 1080], [4096, 6144], [4032, 3000]]:
+        for dims in [[1024, 768], [1024, 766], [1920, 1080],
+                     [4096, 6144], [4032, 3000], [4032, 6000]]:
             w, h = dims
             width, height = imsize.guess_dims(np.prod(dims))
             self.assertEqual([width, height], [w, h])
