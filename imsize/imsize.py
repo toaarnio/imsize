@@ -232,9 +232,8 @@ def guess_dims(num_pixels: int, min_dim: int = 256) -> list[int, int] | None:
     1. No surplus data, such as headers or footers
     2. width % 4 == 0
     3. height % 2 == 0
-    4. width >= height >= min_dim
-    5. 1.0 >= height/width >= 0.4
-    6. Aspect ratio probability order: 3/4, 2/3, 9/16, 1, <max>
+    4. 1.5 >= height/width >= 0.4
+    5. Aspect ratio probability order: 3/4, 3/2, 2/3, 9/16, 1
 
     :param num_pixels: number of pixels (not bytes)
     :param min_dim: required minimum height and width
@@ -245,12 +244,12 @@ def guess_dims(num_pixels: int, min_dim: int = 256) -> list[int, int] | None:
     if candidates:
         pairs = np.asarray(list(zip(candidates, candidates[::-1])))
         aspects = pairs[:, 1] / pairs[:, 0]  # height / width
-        valid = (aspects <= 1.0) * (aspects >= 0.4)
+        valid = (aspects <= 1.5) * (aspects >= 0.4)
         valid *= (pairs[:, 0] % 4 == 0) * (pairs[:, 1] % 2 == 0)
         pairs = pairs[valid]
         aspects = aspects[valid]
         for atol in [1e-4, 0.02]:  # try exact matches first, then approximate
-            for cand in [3/4, 2/3, 9/16, 1]:
+            for cand in [3/4, 3/2, 2/3, 9/16, 1]:
                 isclose = np.isclose(aspects, cand, atol=atol)
                 if np.any(isclose):
                     idx = np.argmax(isclose)
