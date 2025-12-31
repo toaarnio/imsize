@@ -246,17 +246,15 @@ def guess_dims(num_pixels: int, min_dim: int = 256) -> list[int, int] | None:
         aspects = pairs[:, 1] / pairs[:, 0]  # height / width
         valid = (aspects <= 1.5) * (aspects >= 0.4)
         valid *= (pairs[:, 0] % 4 == 0) * (pairs[:, 1] % 2 == 0)
-        pairs = pairs[valid]
-        aspects = aspects[valid]
-        for atol in [1e-4, 0.02]:  # try exact matches first, then approximate
-            for cand in [3/4, 3/2, 2/3, 9/16, 1]:
-                isclose = np.isclose(aspects, cand, atol=atol)
-                if np.any(isclose):
-                    idx = np.argmax(isclose)
-                    dims = pairs[idx].tolist()
-                    return dims
-        dims = pairs[0].tolist() if pairs.size >= 2 else None
-        return dims
+        if np.any(valid):
+            pairs = pairs[valid]
+            aspects = aspects[valid]
+            for atol in [1e-4, 0.05]:  # try exact matches first, then approximate
+                for cand in [3/4, 3/2, 2/3, 9/16, 1]:
+                    closest = np.argmin(np.abs(aspects - cand))
+                    if np.isclose(aspects[closest], cand, atol=atol):
+                        dims = pairs[closest].tolist()
+                        return dims
 
 
 class ImageFileError(Exception):
