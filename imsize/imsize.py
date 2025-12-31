@@ -65,6 +65,7 @@ class ImageInfo:
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
+      packed_raw (bool): True if the image is in bit-packed raw format
       width (int): Width of the image in pixels (orientation ignored)
       height (int): Height of the image in pixels (orientation ignored)
       nchan (int): Number of color channels: 1, 2, 3 or 4
@@ -87,6 +88,7 @@ class ImageInfo:
         self.header_size = None
         self.isfloat = None
         self.cfa_raw = None
+        self.packed_raw = None
         self.width = None
         self.height = None
         self.nchan = None
@@ -240,6 +242,7 @@ def _read_png(filespec):
     info.filetype = "png"
     info.isfloat = False
     info.cfa_raw = False
+    info.packed_raw = False
     with open(filespec, "rb") as f:
         header = f.read(26)
         signature = bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
@@ -265,6 +268,7 @@ def _read_pnm(filespec):
     info.filetype = "pnm"
     info.isfloat = False
     info.cfa_raw = False
+    info.packed_raw = False
     info.width = shape[1]
     info.height = shape[0]
     info.nchan = 1 if len(shape) < 3 else shape[2]
@@ -280,6 +284,7 @@ def _read_pfm(filespec):
     info.filetype = "pfm"
     info.isfloat = True
     info.cfa_raw = False
+    info.packed_raw = False
     info.width = shape[1]
     info.height = shape[0]
     info.nchan = 1 if len(shape) < 3 else shape[2]
@@ -297,6 +302,7 @@ def _read_hdr(filespec):
     info.filesize = os.path.getsize(filespec)
     info.isfloat = True
     info.cfa_raw = False
+    info.packed_raw = False
     info.nchan = 3
     info.bitdepth = 32
     info.bytedepth = 4
@@ -320,6 +326,7 @@ def _read_bmp(filespec):
     info.filetype = "bmp"
     info.isfloat = False
     info.cfa_raw = False
+    info.packed_raw = False
     with open(filespec, "rb") as f:
         bmp_header = f.read(14)
         if bmp_header[:2] == b"BM":
@@ -347,6 +354,7 @@ def _read_exr(filespec):
     info.filespec = filespec
     info.filetype = "exr"
     info.cfa_raw = False
+    info.packed_raw = False
     info.maxval = 1.0
     w, h, nchan, isfloat, bitdepth = exrhdr.dims(filespec)
     info.width = w
@@ -366,6 +374,7 @@ def _read_jpeg(filespec):
         info.filetype = "jpeg"
         info.isfloat = False
         info.cfa_raw = False
+        info.packed_raw = False
         with open(filespec, "rb") as f:
             if f.read(2) == b"\xff\xd8":
                 size = 2
@@ -437,6 +446,7 @@ def _read_exif_pyexiv2(filespec):
         widths = [int(w or 0) for w in widths]  # None => 0
         maximg = subimages[np.argmax(widths)]  # use the largest sub-image
         info = ImageInfo()
+        info.packed_raw = False
         info.cfa_raw = exif.get(f"Exif.{maximg}.PhotometricInterpretation") in ['32803', '34892']
         info.width = int(exif.get(f"Exif.{maximg}.ImageWidth", 0))
         info.height = int(exif.get(f"Exif.{maximg}.ImageLength", 0))
@@ -464,6 +474,7 @@ def _read_exif_exiftool(filespec):
     with exiftool.ExifToolHelper() as et:
         meta = et.get_metadata(filespec)[0]
         info = ImageInfo()
+        info.packed_raw = False
         info.cfa_raw = meta["EXIF:PhotometricInterpretation"] in [32803, 34892]
         info.width = _multikey(meta, "EXIF:ExifImageWidth", "XMP:ImageWidth", "EXIF:ImageWidth")
         info.height = _multikey(meta, "EXIF:ExifImageHeight", "XMP:ImageHeight", "EXIF:ImageHeight")
@@ -591,6 +602,7 @@ def _read_npy(filespec):
             info.filespec = filespec
             info.filetype = "npy"
             info.cfa_raw = False
+            info.packed_raw = False
             info.height, info.width = shape[:2]
             info.nchan = 1 if len(shape) < 3 else shape[2]
             info.isfloat = np.issubdtype(dtype, np.floating)
