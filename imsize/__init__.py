@@ -6,7 +6,7 @@ with the exception of proprietary camera RAW files.
 Example:
   info = imsize.read("myfile.jpg")
   factor = info.nbytes / info.filesize
-  print(f"{info.filespec}: compression factor = {factor.1f}")
+  print(f"{info.filespec}: compression factor = {factor:.1f}")
 
 https://github.com/toaarnio/imsize
 """
