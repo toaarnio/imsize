@@ -662,7 +662,10 @@ def _complete(info):
     info.maxval = info.maxval or 2 ** info.bitdepth - 1
     info.bitdepth = info.bitdepth or int(math.log2(info.maxval + 1))
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
-    info.nbytes = info.width * info.height * info.nchan * info.bytedepth
+    if None in [info.width, info.height, info.nchan]:
+        info.nbytes = info.filesize / info.bytedepth
+    else:
+        info.nbytes = info.width * info.height * info.nchan * info.bytedepth
     info.uncertain = False if info.uncertain is None else info.uncertain
     info.orientation = info.orientation or 0  # None => 0
     info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0

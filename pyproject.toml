@@ -24,11 +24,19 @@ dependencies = [
   "sympy >= 1.14.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pillow",
+  "pytest",
+  "ruff",
+]
+
 [tool.hatch.envs.default]
 installer = "uv"
 
 [project.urls]
 Homepage = "http://github.com/toaarnio/imsize"
+Repository = "http://github.com/toaarnio/imsize"
 
 [project.scripts]
 imsize = "imsize.consoleapp:main"

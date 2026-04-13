@@ -90,7 +90,7 @@ def scan_sizes(filespecs, verbose, show_all):
         except Exception as e:
             print(f"{basename}: {type(e).__name__}: {e}")
             continue
-        if info.width is None:
+        if info.bitdepth is None:
             print(f"{basename}: Unable to guess dimensions. Maybe not an image? Skipping.")
         else:
             num_processed += 1
@@ -104,9 +104,12 @@ def scan_sizes(filespecs, verbose, show_all):
         for info in infos:
             basename = Path(info.filespec).name
             megs = info.nbytes / 1024**2
-            mpix = info.width * info.height / 1000000
+            mpix = info.nbytes / info.bytedepth / 1000000
             est = " [est.]" if info.uncertain else ""
             packed = " [packed]" if info.packed_raw else ""
+            if info.width is None:
+                info.width = "<unknown>"
+                info.height = "<unknown>"
             if info.rot90_ccw_steps in [0, 2]:
                 width, height = (info.width, info.height)
             else:
