@@ -1,3 +1,6 @@
+deps:
+	uv sync --extra dev
+
 lint:
 	uv run --active ruff check imsize/[!a_]*.py
 
@@ -18,8 +21,7 @@ install:
 	@python3 -c 'import imsize; print(f"Installed imsize version {imsize.__version__}.")'
 
 release:
-	uv pip install twine
-	make install
-	twine upload dist/*
+	@echo "Publishing is handled by GitHub Actions with PyPI Trusted Publishing."
+	@echo "Create a GitHub Release to trigger the publish workflow."
 
-.PHONY: lint download test install release
+.PHONY: deps lint download test install release
