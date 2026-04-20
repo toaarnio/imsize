@@ -10,7 +10,7 @@ ifeq (,$(wildcard ./test/images/*.CR2))
 endif
 
 test: download lint
-	uv run pytest -v
+	uv run --active pytest -v
 
 install:
 	rm -rf dist || true

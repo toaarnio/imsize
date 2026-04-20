@@ -66,8 +66,10 @@ class ImageInfo:
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
       packed_raw (bool): True if the image is in bit-packed raw format
+      npixels (int): Size of the image in pixels (width & height may be unknown)
       width (int): Width of the image in pixels (orientation ignored)
       height (int): Height of the image in pixels (orientation ignored)
+      stride (int): Width of the image in bytes
       nchan (int): Number of color channels: 1, 2, 3 or 4
       bitdepth (int): Bits per sample: 1 to 32
       bytedepth (float): Bytes per sample; may be fractional if packed_raw is True
@@ -89,8 +91,10 @@ class ImageInfo:
         self.isfloat = None
         self.cfa_raw = None
         self.packed_raw = None
+        self.npixels = None
         self.width = None
         self.height = None
+        self.stride = None
         self.nchan = None
         self.bitdepth = None
         self.bytedepth = None
@@ -605,14 +609,15 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
     info.packed_raw, info.bitdepth = guess_packing(filespec)
     info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
-    numpixels = int(info.filesize / info.bytedepth)
-    dims = guess_dims(numpixels)
+    info.nbytes = info.filesize
+    info.npixels = int(info.filesize / info.bytedepth)
+    dims = guess_dims(info.npixels)
     if dims is not None:  # make a guess without header/footer bytes
         info.width, info.height = dims
     else:  # make a guess with header/footer allowed
         for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
-            info.height = math.sqrt(numpixels * aspect)
-            info.width = numpixels / info.height
+            info.height = math.sqrt(info.npixels * aspect)
+            info.width = info.npixels / info.height
             wrem4 = info.width % 4
             hrem4 = info.height % 4
             if wrem4 == 0 and hrem4 == 0:
@@ -662,10 +667,10 @@ def _complete(info):
     info.maxval = info.maxval or 2 ** info.bitdepth - 1
     info.bitdepth = info.bitdepth or int(math.log2(info.maxval + 1))
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
-    if None in [info.width, info.height, info.nchan]:
-        info.nbytes = info.filesize / info.bytedepth
-    else:
-        info.nbytes = info.width * info.height * info.nchan * info.bytedepth
+    if None not in [info.width, info.height]:
+        info.npixels = info.width * info.height
+        info.nbytes = info.npixels * info.nchan * info.bytedepth
+        info.stride = info.stride or info.width * info.bytedepth
     info.uncertain = False if info.uncertain is None else info.uncertain
     info.orientation = info.orientation or 0  # None => 0
     info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0
