@@ -65,11 +65,11 @@ def find_files(paths):
     """
     allfiles = []
     for path in paths:
-        if os.path.isdir(path):
+        if Path(path).is_dir():
             for filetype in imsize.FILETYPES:
                 allfiles += glob.glob(os.path.join(path, filetype))
                 allfiles += glob.glob(os.path.join(path, filetype.upper()))
-        elif os.path.isfile(path):
+        elif Path(path).is_file():
             allfiles += [path]
     return allfiles
 
@@ -84,14 +84,14 @@ def scan_sizes(filespecs, verbose, show_all):
     max_namelen = 0
     infos = []
     for filespec in sorted(filespecs):
-        basename = os.path.basename(filespec)
+        basename = Path(filespec).name
         try:
             info = imsize.read(filespec)
         except Exception as e:
             print(f"{basename}: {type(e).__name__}: {e}")
             continue
         if info.bitdepth is None:
-            print(f"{basename}: Unable to guess dimensions. Maybe not an image? Skipping.")
+            print(f"{basename}: Unrecognized file extension '.{info.filetype}'. Skipping.")
         else:
             num_processed += 1
             total_uncompressed += info.nbytes / 1024**2
