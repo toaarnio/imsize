@@ -163,6 +163,42 @@ class ReadTest(unittest.TestCase):
                 self.assertEqual(info.nbytes, 600 * 450 * 3)
                 self.assertEqual(info.orientation, (i % 8) + 1)
 
+    def test_raw10(self):
+        raw10s = glob.glob(os.path.join(imagedir, "*raw10.mipi"))
+        self.assertTrue(len(raw10s) > 0)
+        for raw10 in sorted(raw10s):
+            info = imsize.read(Path(raw10))
+            self.assertEqual(info.filetype, "mipi")
+            self.assertEqual(info.nchan, 1)
+            self.assertEqual(info.width, 640)
+            self.assertEqual(info.height, 480)
+            self.assertEqual(info.bitdepth, 10)
+            self.assertEqual(info.bytedepth, 1.25)
+            self.assertEqual(info.maxval, 1023)
+            self.assertEqual(info.cfa_raw, True)
+            self.assertEqual(info.packed_raw, True)
+            self.assertEqual(info.isfloat, False)
+            self.assertEqual(info.uncertain, True)
+            self.assertEqual(info.nbytes, 640 * 480 * 10 // 8)
+
+    def test_raw12(self):
+        raw12s = glob.glob(os.path.join(imagedir, "*raw12.mipi"))
+        self.assertTrue(len(raw12s) > 0)
+        for raw12 in sorted(raw12s):
+            info = imsize.read(Path(raw12))
+            self.assertEqual(info.filetype, "mipi")
+            self.assertEqual(info.nchan, 1)
+            self.assertEqual(info.width, 640)
+            self.assertEqual(info.height, 480)
+            self.assertEqual(info.bitdepth, 12)
+            self.assertEqual(info.bytedepth, 1.5)
+            self.assertEqual(info.maxval, 4095)
+            self.assertEqual(info.cfa_raw, True)
+            self.assertEqual(info.packed_raw, True)
+            self.assertEqual(info.isfloat, False)
+            self.assertEqual(info.uncertain, True)
+            self.assertEqual(info.nbytes, 640 * 480 * 12 // 8)
+
     def test_empty_files(self):
         for ext in imsize.FILETYPES:
             with tempfile.NamedTemporaryFile(suffix=ext) as fp:

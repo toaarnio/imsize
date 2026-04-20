@@ -47,7 +47,8 @@ FILETYPES = [".png", ".pnm", ".pgm",
              ".jpeg", ".jpg", ".insp",
              ".tiff", ".tif", ".exr",
              ".hdr", ".dng", ".cr2",
-             ".nef", ".raw", ".npy"]
+             ".nef", ".raw", ".mipi",
+             ".npy"]
 
 
 class ImageInfo:
@@ -56,7 +57,7 @@ class ImageInfo:
 
     Attributes:
       filespec (str): The filespec given to read(), copied verbatim
-      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|hdr|dng|cr2|nef|raw|npy|...
+      filetype (str): File type: png|pnm|pfm|bmp|jpeg|insp|tiff|exr|hdr|dng|cr2|nef|raw|mipi|npy|...
       filesize (int): Size of the file on disk in bytes
       multi_picture (bool): True if there is more than one image in the file
       num_images (int): Number of images contained in the file
@@ -147,6 +148,7 @@ def read(filespec: str) -> ImageInfo:
                 "cr2": _read_cr2,
                 "nef": _read_nef,
                 "raw": _read_raw,
+                "mipi": _read_mipi,
                 "npy": _read_npy}
 
     # Check that we have a parser for each known filetype, and
@@ -596,6 +598,35 @@ def _read_nef(filespec):  # reading the whole file ==> SLOW
     return info
 
 
+def _guess_raw_dims(info):
+    """
+    Fills in info.width, info.height, and info.header_size by guessing from
+    info.npixels (already set by the caller). First tries exact divisor-based
+    matching via guess_dims(); if that fails, falls back to aspect-ratio
+    heuristics that tolerate a small header/footer.
+
+    :param info: ImageInfo with npixels, filesize, and bytedepth already set
+    :returns: the same info object, with width/height/header_size updated
+    """
+    dims = guess_dims(info.npixels)
+    if dims is not None:  # exact match, no surplus bytes
+        info.width, info.height = dims
+        return info
+    for aspect in [3/4, 2/3, 9/16]:  # try typical aspect ratios
+        h = math.sqrt(info.npixels * aspect)
+        w = info.npixels / h
+        wrem4 = w % 4
+        hrem4 = h % 4
+        if wrem4 == 0 and hrem4 == 0:
+            info.width, info.height = int(w), int(h)
+            break
+        if wrem4 < 0.5 and hrem4 < 0.5:
+            info.width, info.height = int(w), int(h)
+            info.header_size = info.filesize - info.width * info.height * info.bytedepth
+            break
+    return info
+
+
 def _read_raw(filespec):  # reading the whole file ==> SLOW
     info = ImageInfo()
     info.filespec = filespec
@@ -611,26 +642,34 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
     info.nbytes = info.filesize
     info.npixels = int(info.filesize / info.bytedepth)
-    dims = guess_dims(info.npixels)
-    if dims is not None:  # make a guess without header/footer bytes
-        info.width, info.height = dims
-    else:  # make a guess with header/footer allowed
-        for aspect in [3/4, 2/3, 9/16]:  # try some typical aspect ratios
-            info.height = math.sqrt(info.npixels * aspect)
-            info.width = info.npixels / info.height
-            wrem4 = info.width % 4
-            hrem4 = info.height % 4
-            if wrem4 == 0 and hrem4 == 0:
-                info.width = int(info.width)
-                info.height = int(info.height)
-                break
-            if wrem4 < 0.5 and hrem4 < 0.5:
-                info.width = int(info.width)
-                info.height = int(info.height)
-                info.header_size = info.filesize - info.width * info.height * info.bytedepth
-                break
-            info.width = None
-            info.height = None
+    info = _guess_raw_dims(info)
+    info = _complete(info)
+    return info
+
+
+def _read_mipi(filespec):
+    """
+    Reads MIPI RAW10 or RAW12 bit-packed camera raw files. In MIPI RAW10,
+    four 10-bit pixels are packed into five bytes. In MIPI RAW12, two 12-bit
+    pixels are packed into three bytes. Width and height are guessed from the
+    file size.
+    """
+    info = ImageInfo()
+    info.filespec = filespec
+    info.filetype = "mipi"
+    info.bitdepth = guess_packing(filespec)[1]
+    info.packed_raw = True  # MIPI raw files are always packed
+    info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
+    info.header_size = 0  # MIPI raw files have no header
+    info.uncertain = True  # width, height & bitdepth are guessed
+    info.isfloat = False
+    info.cfa_raw = True
+    info.nchan = 1
+    info.filesize = os.path.getsize(filespec)
+    assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
+    info.nbytes = info.filesize
+    info.npixels = int(info.filesize / info.bytedepth)
+    info = _guess_raw_dims(info)
     info = _complete(info)
     return info
 
