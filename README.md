@@ -1,6 +1,6 @@
 # imsize
 
-[![Build Status](https://travis-ci.com/toaarnio/imsize.svg?branch=master)](https://travis-ci.com/github/toaarnio/imsize)
+[Build Status](https://github.com/toaarnio/imsize/actions/workflows/ci.yml)
 
 Lightning-fast extraction of image dimensions & bit depth. Tested on Python 3.10+ and Ubuntu 24.04.
 
