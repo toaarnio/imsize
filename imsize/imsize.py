@@ -223,7 +223,8 @@ def guess_bpp(raw: np.ndarray) -> int:
     :param raw: raw pixel data to analyze; dtype = np.uint16
     :returns: bits per pixel, can be either 10 or 12
     """
-    minbits = np.ceil(np.log2(np.max(raw)))  # 5, 6, 7, ..., 16
+    maxx = max(np.max(raw), 1)  # log2(0) would fail
+    minbits = np.ceil(np.log2(maxx))  # 5, 6, 7, ..., 16
     minbits = np.ceil(minbits / 2) * 2  # 6, 8, 10, 12, ..., 16
     minbits = np.clip(minbits, 10, 12)  # 10 or 12
     minbits = int(minbits)
