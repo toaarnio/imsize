@@ -39,5 +39,7 @@ lint.ignore = [
 
        "BLE001",  # flake8-blind-except: blind-except
        "PERF203",  # perflint: try-except-in-loop
+       "PLR0915",  # pylint: too-many-statements
+       "C901",  # mccabe: complex-structure
 
        ]
