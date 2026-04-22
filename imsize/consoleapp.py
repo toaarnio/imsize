@@ -106,7 +106,8 @@ def scan_sizes(filespecs, verbose, show_all):
             megs = info.nbytes / 1024**2
             mpix = info.nbytes / info.bytedepth / 1000000
             est = " [est.]" if info.uncertain else ""
-            packed = " [packed]" if info.packed_raw else ""
+            packed = " [packed raw]" if info.packed_raw else ""
+            packed = " [mipi raw]" if info.mipi_raw else packed
             if info.width is None:
                 info.width = "<unknown>"
                 info.height = "<unknown>"

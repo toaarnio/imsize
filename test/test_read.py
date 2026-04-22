@@ -163,6 +163,42 @@ class ReadTest(unittest.TestCase):
                 self.assertEqual(info.nbytes, 600 * 450 * 3)
                 self.assertEqual(info.orientation, (i % 8) + 1)
 
+    def test_guess_packing_mipi10(self):
+        raw10s = glob.glob(os.path.join(imagedir, "*raw10.mipi"))
+        self.assertTrue(len(raw10s) > 0)
+        for filespec in sorted(raw10s):
+            is_packed, bpp, is_mipi = imsize.guess_packing(Path(filespec))
+            self.assertTrue(is_packed)
+            self.assertEqual(bpp, 10)
+            self.assertTrue(is_mipi)
+
+    def test_guess_packing_mipi12(self):
+        raw12s = glob.glob(os.path.join(imagedir, "*raw12.mipi"))
+        self.assertTrue(len(raw12s) > 0)
+        for filespec in sorted(raw12s):
+            is_packed, bpp, is_mipi = imsize.guess_packing(Path(filespec))
+            self.assertTrue(is_packed)
+            self.assertEqual(bpp, 12)
+            self.assertTrue(is_mipi)
+
+    def test_guess_packing_plain10(self):
+        plain10s = glob.glob(os.path.join(imagedir, "*plain10.raw"))
+        self.assertTrue(len(plain10s) > 0)
+        for filespec in sorted(plain10s):
+            is_packed, bpp, is_mipi = imsize.guess_packing(Path(filespec))
+            self.assertTrue(is_packed)
+            self.assertEqual(bpp, 10)
+            self.assertFalse(is_mipi)
+
+    def test_guess_packing_plain12(self):
+        plain12s = glob.glob(os.path.join(imagedir, "*plain12.raw"))
+        self.assertTrue(len(plain12s) > 0)
+        for filespec in sorted(plain12s):
+            is_packed, bpp, is_mipi = imsize.guess_packing(Path(filespec))
+            self.assertTrue(is_packed)
+            self.assertEqual(bpp, 12)
+            self.assertFalse(is_mipi)
+
     def test_raw10(self):
         raw10s = glob.glob(os.path.join(imagedir, "*raw10.mipi"))
         self.assertTrue(len(raw10s) > 0)
@@ -177,6 +213,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.maxval, 1023)
             self.assertEqual(info.cfa_raw, True)
             self.assertEqual(info.packed_raw, True)
+            self.assertEqual(info.mipi_raw, True)
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, True)
             self.assertEqual(info.nbytes, 640 * 480 * 10 // 8)
@@ -195,6 +232,7 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(info.maxval, 4095)
             self.assertEqual(info.cfa_raw, True)
             self.assertEqual(info.packed_raw, True)
+            self.assertEqual(info.mipi_raw, True)
             self.assertEqual(info.isfloat, False)
             self.assertEqual(info.uncertain, True)
             self.assertEqual(info.nbytes, 640 * 480 * 12 // 8)

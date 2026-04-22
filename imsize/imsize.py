@@ -66,7 +66,8 @@ class ImageInfo:
       header_size (int): Size of .raw file header in bytes
       isfloat (bool): True if the image is in floating-point format
       cfa_raw (bool): True if the image is in CFA (Bayer) raw format
-      packed_raw (bool): True if the image is in bit-packed raw format
+      packed_raw (bool): True if the image is in any bit-packed raw format
+      mipi_raw (bool): True if the image is in MIPI bit-packed raw format
       npixels (int): Size of the image in pixels (width & height may be unknown)
       width (int): Width of the image in pixels (orientation ignored)
       height (int): Height of the image in pixels (orientation ignored)
@@ -92,6 +93,7 @@ class ImageInfo:
         self.isfloat = None
         self.cfa_raw = None
         self.packed_raw = None
+        self.mipi_raw = None
         self.npixels = None
         self.width = None
         self.height = None
@@ -179,12 +181,18 @@ def read(filespec: str) -> ImageInfo:
         return info
 
 
-def guess_packing(filespec: str) -> tuple[bool, int]:
+def guess_packing(filespec: str) -> tuple[bool, int, bool | None]:
     """
     Try to guess whether a raw file is unpacked (2 bytes per pixel),
     12-bit packed (3 bytes per 2 pixels), or 10-bit packed (5 bytes
-    per 4 pixels). The determination is based on the first 150 kB of
-    the file contents.
+    per 4 pixels). For packed files, also distinguish MIPI packing
+    from plain/SMIA packing using a pedestal-based test.
+
+    The pedestal test decodes the sample with both candidate decoders
+    and checks which one yields a 2nd-percentile value above the lower
+    tail of an assumed dark noise distribution (40 DN for 10-bit).
+    Erroneously decoded samples would be expected to have a greater
+    percentage of near-zero values.
 
     Note the following assumptions and limitations:
     1. Only 10-bit and 12-bit formats are recognized;
@@ -192,11 +200,12 @@ def guess_packing(filespec: str) -> tuple[bool, int]:
     3. Headers and footers may adversely affect reliability;
     4. Unpacked images are assumed to be little-endian (x86);
     5. The analysis is based on the first 150 kB of the file;
-    6. Bit-packing order is left undetermined.
+    6. Extremely noisy images may be miscategorized.
 
     :param filespec: raw file to analyze
     :returns is_packed: True if the raw data is bit-packed
     :returns bpp: bits per pixel, can be either 10 or 12
+    :returns is_mipi: True=MIPI, False=unpacked/other, None=ambiguous
     """
     def get_periodicity_score(p):
         cols = data.reshape(-1, p)
@@ -204,15 +213,93 @@ def guess_packing(filespec: str) -> tuple[bool, int]:
         score = np.std(col_stds) / (np.mean(col_stds) + 1e-6)
         return score
 
+    def p02(pixels):
+        return int(np.percentile(pixels, 2.0))
+
+    def decode_plain10(raw):
+        # LSB-first contiguous packing of 4 x 10-bit pixels into 5 bytes:
+        #   byte0: a7 a6 a5 a4 a3 a2 a1 a0
+        #   byte1: b5 b4 b3 b2 b1 b0 a9 a8
+        #   byte2: c3 c2 c1 c0 b9 b8 b7 b6
+        #   byte3: d1 d0 c9 c8 c7 c6 c5 c4
+        #   byte4: d9 d8 d7 d6 d5 d4 d3 d2
+        b = raw[:len(raw) - len(raw) % 5].reshape(-1, 5)
+        p = np.empty((len(b), 4), dtype=np.uint16)
+        p[:, 0] = b[:, 0].astype(np.uint16) | ((b[:, 1].astype(np.uint16) & 0x03) << 8)
+        p[:, 1] = (b[:, 1].astype(np.uint16) >> 2) | ((b[:, 2].astype(np.uint16) & 0x0F) << 6)
+        p[:, 2] = (b[:, 2].astype(np.uint16) >> 4) | ((b[:, 3].astype(np.uint16) & 0x3F) << 4)
+        p[:, 3] = (b[:, 3].astype(np.uint16) >> 6) | (b[:, 4].astype(np.uint16) << 2)
+        return p.flatten()
+
+    def decode_plain12(raw):
+        # LSB-first contiguous packing of 2 x 12-bit pixels into 3 bytes:
+        #   byte0: a7 a6 a5 a4 a3 a2 a1 a0
+        #   byte1: b3 b2 b1 b0 aB aA a9 a8
+        #   byte2: cB cA c9 c8 b7 b6 b5 b4
+        b = raw[:len(raw) - len(raw) % 3].reshape(-1, 3)
+        p = np.empty((len(b), 2), dtype=np.uint16)
+        p[:, 0] = b[:, 0].astype(np.uint16) | ((b[:, 1].astype(np.uint16) & 0x0F) << 8)
+        p[:, 1] = (b[:, 1].astype(np.uint16) >> 4) | (b[:, 2].astype(np.uint16) << 4)
+        return p.flatten()
+
+    def decode_mipi10(raw):
+        # MSB-first disjoint packing of 4 x 10-bit pixels into 5 bytes:
+        #   byte0: a9 a8 a7 a6 a5 a4 a3 a2
+        #   byte1: b9 b8 b7 b6 b5 b4 b3 b2
+        #   byte2: c9 c8 c7 c6 c5 c4 c3 c2
+        #   byte3: d9 d8 d7 d6 d5 d4 d3 d2
+        #   byte4: a1 a0 b1 b0 c1 c0 d1 d0
+        b = raw[:len(raw) - len(raw) % 5].reshape(-1, 5)
+        p = np.empty((len(b), 4), dtype=np.uint16)
+        p[:, 0] = (b[:, 0].astype(np.uint16) << 2) | ((b[:, 4] >> 6) & 3)
+        p[:, 1] = (b[:, 1].astype(np.uint16) << 2) | ((b[:, 4] >> 4) & 3)
+        p[:, 2] = (b[:, 2].astype(np.uint16) << 2) | ((b[:, 4] >> 2) & 3)
+        p[:, 3] = (b[:, 3].astype(np.uint16) << 2) | (b[:, 4] & 3)
+        return p.flatten()
+
+    def decode_mipi12(raw):
+        # MSB-first disjoint packing of 2 x 12-bit pixels into 3 bytes:
+        #   byte0: aB aA a9 a8 a7 a6 a5 a4
+        #   byte1: bB bB b9 b8 b7 b6 b5 b4
+        #   byte2: a3 a2 a1 a0 b3 b2 b1 b0
+        b = raw[:len(raw) - len(raw) % 3].reshape(-1, 3)
+        p = np.empty((len(b), 2), dtype=np.uint16)
+        p[:, 0] = (b[:, 0].astype(np.uint16) << 4) | ((b[:, 2] >> 4) & 0xF)
+        p[:, 1] = (b[:, 1].astype(np.uint16) << 4) | (b[:, 2] & 0xF)
+        return p.flatten()
+
     data = np.fromfile(filespec, dtype=np.uint8, count=1024 * 150)
     data = data[3000:]  # should be enough to skip any headers
     scores = {p: get_periodicity_score(p) for p in [2, 3, 5]}
     winner = max(scores, key=scores.get)
     period_to_bpp = {2: 0, 3: 12, 5: 10}
-    bitdepth = period_to_bpp[winner]
-    bpp = bitdepth or guess_bpp(data.view(np.uint16))
-    is_packed = bool(bitdepth)
-    return is_packed, bpp
+    bpp = period_to_bpp[winner]
+
+    if bpp == 0:  # unpacked
+        bpp = guess_bpp(data.view(np.uint16))
+        return False, bpp, False
+
+    # Choose a bit-packing format that results in at most 2% of pixels
+    # lying below 40 DN at 10 bpp; this assumes a typical pedestal value
+    # of 50-70 DN and not an excessive amount of noise in dark regions
+
+    if bpp == 10:
+        min_pedestal = 40
+        mipi_ok  = p02(decode_mipi10(data)) >= min_pedestal
+        plain_ok = p02(decode_plain10(data)) >= min_pedestal
+    if bpp == 12:
+        min_pedestal = 160
+        mipi_ok  = p02(decode_mipi12(data)) >= min_pedestal
+        plain_ok = p02(decode_plain12(data)) >= min_pedestal
+
+    if mipi_ok and not plain_ok:
+        is_mipi = True
+    elif plain_ok and not mipi_ok:
+        is_mipi = False
+    else:
+        is_mipi = None  # ambiguous: both or neither match the pedestal window
+
+    return True, bpp, is_mipi
 
 
 def guess_bpp(raw: np.ndarray) -> int:
@@ -628,7 +715,7 @@ def _guess_raw_dims(info):
     return info
 
 
-def _read_raw(filespec):  # reading the whole file ==> SLOW
+def _read_raw(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "raw"
@@ -639,7 +726,7 @@ def _read_raw(filespec):  # reading the whole file ==> SLOW
     info.header_size = 0  # assume no header
     info.filesize = os.path.getsize(filespec)
     assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
-    info.packed_raw, info.bitdepth = guess_packing(filespec)
+    info.packed_raw, info.bitdepth, info.mipi_raw = guess_packing(filespec)
     info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
     info.nbytes = info.filesize
     info.npixels = int(info.filesize / info.bytedepth)
@@ -658,18 +745,19 @@ def _read_mipi(filespec):
     info = ImageInfo()
     info.filespec = filespec
     info.filetype = "mipi"
-    info.bitdepth = guess_packing(filespec)[1]
+    info.mipi_raw = True  # we only get here if the suffix is .mipi
     info.packed_raw = True  # MIPI raw files are always packed
-    info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
-    info.header_size = 0  # MIPI raw files have no header
     info.uncertain = True  # width, height & bitdepth are guessed
     info.isfloat = False
     info.cfa_raw = True
     info.nchan = 1
+    info.header_size = 0  # MIPI raw files have no header
     info.filesize = os.path.getsize(filespec)
-    assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid camera raw file."
-    info.nbytes = info.filesize
+    assert info.filesize > 256 * 256 * 2, f"{filespec} is too small ({info.filesize} bytes) to be a valid MIPI raw file."
+    info.bitdepth = guess_packing(filespec)[1]
+    info.bytedepth = (info.bitdepth / 8) if info.packed_raw else 2
     info.npixels = int(info.filesize / info.bytedepth)
+    info.nbytes = info.filesize
     info = _guess_raw_dims(info)
     info = _complete(info)
     return info
@@ -704,6 +792,7 @@ def _read_npy(filespec):
 
 def _complete(info):
     info.filesize = info.filesize or os.path.getsize(info.filespec)
+    info.mipi_raw = info.mipi_raw and info.packed_raw
     info.maxval = info.maxval or 2 ** info.bitdepth - 1
     info.bitdepth = info.bitdepth or int(math.log2(info.maxval + 1))
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
