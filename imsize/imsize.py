@@ -798,8 +798,8 @@ def _complete(info):
     info.bytedepth = info.bytedepth or (2 if info.maxval > 255 else 1)
     if None not in [info.width, info.height]:
         info.npixels = info.width * info.height
-        info.nbytes = info.npixels * info.nchan * info.bytedepth
-        info.stride = info.stride or info.width * info.bytedepth
+        info.nbytes = int(info.npixels * info.nchan * info.bytedepth)
+        info.stride = info.stride or int(info.width * info.bytedepth)
     info.uncertain = False if info.uncertain is None else info.uncertain
     info.orientation = info.orientation or 0  # None => 0
     info.rot90_ccw_steps = info.rot90_ccw_steps or 0  # None => 0
