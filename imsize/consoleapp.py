@@ -14,12 +14,7 @@ from pathlib import Path  # built-in library
 
 import imsize             # pip install imsize
 
-try:
-    # package mode
-    from imsize import argv
-except ImportError:
-    # stand-alone mode
-    import argv
+from imsize import argv   # local import
 
 
 def main():
@@ -53,6 +48,7 @@ def main():
         sys.exit(-1)
     else:
         if verbose:
+            print(f"imsize version {imsize.__version__} [{Path(__file__)}].")
             print("See 'imsize --help' for command-line options.")
         paths = sys.argv[1:] or ["."]  # scan current directory if no arguments
         filespecs = find_files(paths)
@@ -67,10 +63,15 @@ def find_files(paths):
     for path in paths:
         if Path(path).is_dir():
             for filetype in imsize.FILETYPES:
-                allfiles += glob.glob(os.path.join(path, filetype))
-                allfiles += glob.glob(os.path.join(path, filetype.upper()))
+                allfiles += glob.glob(os.path.join(path, f"*{filetype}"))
+                allfiles += glob.glob(os.path.join(path, f"*{filetype.upper()}"))
         elif Path(path).is_file():
             allfiles += [path]
+        else:
+            # Unexpanded wildcard (e.g. on Windows, where the shell does
+            # not expand globs); expand it here so that 'imsize *.jpg'
+            # works the same as on Unix shells.
+            allfiles += [f for f in glob.glob(path) if Path(f).is_file()]
     return allfiles
 
 
